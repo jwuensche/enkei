@@ -1,6 +1,6 @@
 # enkei (遠景)
 
-A wallpaper tool for the 21st century. The main motivation behind `enkei` was
+A modern wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei` was
 the possibility to display dynamic and changing wallpapers compatible with the
 Gnome wallpaper specification. This wallpaper tool uses
 [gtk-layer-shell](https://github.com/wmww/gtk-layer-shell) to render backgrounds

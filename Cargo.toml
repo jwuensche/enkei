@@ -2,7 +2,7 @@
 name = "enkei"
 version = "0.1.0"
 authors = ["Johannes Wünsche <johannes@spacesnek.rocks>"]
-description = "A desktop background daemon supporting GNOME dynamic wallpapers"
+description = "A modern wallpaper tool with support for GNOME dynamic wallpapers"
 edition = "2018"
 
 [dependencies]
