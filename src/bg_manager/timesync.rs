@@ -12,9 +12,9 @@ enum Response {
     Finished,
 }
 
-use crate::{OutputState, metadata};
+use crate::metadata;
+use super::{BackgroundManager, OutputState};
 use metadata::Transition;
-use crate::BackgroundManager;
 use gtk::prelude::*;
 
 pub fn calc_interval(transition_duration: u32) -> u32 {
