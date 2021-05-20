@@ -1,17 +1,16 @@
-
 extern crate gtk_layer_shell as gls;
 
-use gio::prelude::*;
-use cairo::{Context, ImageSurface};
-use gdk::{Display, Monitor};
-use gtk::{prelude::*, Image};
+use super::main_tick;
+use super::TransitionState;
 use crate::metadata;
 use crate::metadata::Metadata;
-use gio::ApplicationFlags;
-use crate::{Scaling, Filter};
-use super::TransitionState;
-use super::main_tick;
 use crate::NAME;
+use crate::{Filter, Scaling};
+use cairo::{Context, ImageSurface};
+use gdk::{Display, Monitor};
+use gio::prelude::*;
+use gio::ApplicationFlags;
+use gtk::{prelude::*, Image};
 
 // Managment structure holding all the windows rendering the
 // separate windows. For each display on window is created
@@ -68,7 +67,7 @@ impl BackgroundManager {
             config,
             app,
             filter,
-            scaling
+            scaling,
         };
         bm.init_and_load()?;
         Ok(bm)
@@ -88,7 +87,6 @@ impl BackgroundManager {
             }
         }
 
-
         let first = {
             let mut image_file = std::fs::OpenOptions::new()
                 .read(true)
@@ -106,8 +104,12 @@ impl BackgroundManager {
 
         for output in self.monitors.iter_mut() {
             output.duration_in_sec = transition.duration_transition as u64;
-            output.image_from = self.scaling.scale(&first, &output.monitor.get_geometry(), self.filter);
-            output.image_to = self.scaling.scale(&second, &output.monitor.get_geometry(), self.filter);
+            output.image_from =
+                self.scaling
+                    .scale(&first, &output.monitor.get_geometry(), self.filter);
+            output.image_to =
+                self.scaling
+                    .scale(&second, &output.monitor.get_geometry(), self.filter);
             let ctx = Context::new(&output.image_from);
             ctx.set_source_surface(&output.image_to, 0.0, 0.0);
             ctx.paint_with_alpha(progress as f64 / transition.duration_transition as f64);
@@ -147,6 +149,6 @@ impl BackgroundManager {
         let origin = self.clone();
         main_tick(origin, TransitionState::Start);
 
-        self.app.run(&vec!(NAME.to_string()));
+        self.app.run(&vec![NAME.to_string()]);
     }
 }

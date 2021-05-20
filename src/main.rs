@@ -1,8 +1,8 @@
 extern crate gtk_layer_shell as gls;
 use cairo::ImageSurface;
+use clap::{arg_enum, value_t, App, Arg};
 use gdk::Rectangle;
 use metadata::{Metadata, MetadataReader};
-use clap::{App, Arg, arg_enum, value_t};
 
 mod bg_manager;
 mod metadata;
@@ -13,22 +13,15 @@ use bg_manager::BackgroundManager;
 impl Scaling {
     fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
         match self {
-            Scaling::Fill => {
-                Scaling::fill(sur, geometry, filter)
-            }
-            Scaling::Fit => {
-                Scaling::fit(sur, geometry, filter)
-            }
-            Scaling::None => {
-                Scaling::none(sur, geometry)
-            }
+            Scaling::Fill => Scaling::fill(sur, geometry, filter),
+            Scaling::Fit => Scaling::fit(sur, geometry, filter),
+            Scaling::None => Scaling::none(sur, geometry),
         }
-
     }
 
     fn none(buf: &ImageSurface, geometry: &Rectangle) -> ImageSurface {
-        let pad_width = (geometry.width - buf.get_width()) as f64 /2.0;
-        let pad_height = (geometry.height - buf.get_height()) as f64 /2.0;
+        let pad_width = (geometry.width - buf.get_width()) as f64 / 2.0;
+        let pad_height = (geometry.height - buf.get_height()) as f64 / 2.0;
 
         let target = {
             let target =
@@ -52,14 +45,18 @@ impl Scaling {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 
-    fn fill_or_fit<F: Fn(f64,f64) -> f64>(buf: &ImageSurface, geometry: &Rectangle, filter: Filter, comp: F) -> ImageSurface {
-
+    fn fill_or_fit<F: Fn(f64, f64) -> f64>(
+        buf: &ImageSurface,
+        geometry: &Rectangle,
+        filter: Filter,
+        comp: F,
+    ) -> ImageSurface {
         // 1. Crop the image if necessary
         // 2. Scale the image to the proper size
 
         let height_ratio = geometry.height as f64 / buf.get_height() as f64;
         let width_ratio = geometry.width as f64 / buf.get_width() as f64;
-        let max_ratio = comp(height_ratio,width_ratio);
+        let max_ratio = comp(height_ratio, width_ratio);
 
         // Get cropping edges (aspect)
         let crop_height = ((buf.get_height() as f64 * max_ratio) as i32)
@@ -90,9 +87,7 @@ impl Scaling {
     }
 }
 
-
-
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Debug, Clone)]
     pub enum Scaling {
         Fill,
@@ -101,7 +96,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Debug)]
     pub enum Mode {
         Static,
@@ -109,7 +104,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Debug, Clone, Copy)]
     pub enum Filter {
         Fast,
@@ -154,71 +149,72 @@ fn main() {
         .about(DESC)
         .version(VERSION)
         .author(AUTHOR)
-        .arg(Arg::with_name(FILE)
-             .help("The file to display.")
-             .long_help(FILE_HELP)
-             .index(1)
-             .takes_value(true)
-             .required(true))
-        .arg(Arg::with_name(MODE)
-             .help("The display mode which should be used for the given file.")
-             .long_help(MODE_HELP)
-             .takes_value(true)
-             .possible_values(&Mode::variants())
-             .case_insensitive(true)
-             .short("m")
-             .long("mode"))
-        .arg(Arg::with_name(SCALE)
-             .help("How to scale or crop images.")
-             .long_help(SCALE_HELP)
-             .takes_value(true)
-             .possible_values(&Scaling::variants())
-             .case_insensitive(true)
-             .default_value("fill")
-             .short("s")
-             .long("scale"))
-        .arg(Arg::with_name(FILTER)
-             .help("How to filter scaled images.")
-             .long_help(FILTER_HELP)
-             .takes_value(true)
-             .short("f")
-             .long("filter")
-             .default_value("good")
-             .possible_values(&Filter::variants())
-             .case_insensitive(true))
+        .arg(
+            Arg::with_name(FILE)
+                .help("The file to display.")
+                .long_help(FILE_HELP)
+                .index(1)
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(MODE)
+                .help("The display mode which should be used for the given file.")
+                .long_help(MODE_HELP)
+                .takes_value(true)
+                .possible_values(&Mode::variants())
+                .case_insensitive(true)
+                .short("m")
+                .long("mode"),
+        )
+        .arg(
+            Arg::with_name(SCALE)
+                .help("How to scale or crop images.")
+                .long_help(SCALE_HELP)
+                .takes_value(true)
+                .possible_values(&Scaling::variants())
+                .case_insensitive(true)
+                .default_value("fill")
+                .short("s")
+                .long("scale"),
+        )
+        .arg(
+            Arg::with_name(FILTER)
+                .help("How to filter scaled images.")
+                .long_help(FILTER_HELP)
+                .takes_value(true)
+                .short("f")
+                .long("filter")
+                .default_value("good")
+                .possible_values(&Filter::variants())
+                .case_insensitive(true),
+        )
         .get_matches();
 
     let image = matches.value_of(FILE).expect("No FILE given");
 
-    let scaling: Scaling = value_t!(matches, SCALE, Scaling).expect("Something went wrong decoding the given scale mode.");
-    let filter: Filter = value_t!(matches, FILTER, Filter).expect("Something went wrong decoding the given filter.");
-    let mode: Option<Mode> =  value_t!(matches, MODE, Mode).ok();
+    let scaling: Scaling = value_t!(matches, SCALE, Scaling)
+        .expect("Something went wrong decoding the given scale mode.");
+    let filter: Filter =
+        value_t!(matches, FILTER, Filter).expect("Something went wrong decoding the given filter.");
+    let mode: Option<Mode> = value_t!(matches, MODE, Mode).ok();
 
     let config;
     if let Some(chosen_mode) = mode {
         match chosen_mode {
-            Mode::Dynamic => {
-                config = load_dynamic(image)
-            }
-            Mode::Static => {
-                config = load_static(image)
-            }
+            Mode::Dynamic => config = load_dynamic(image),
+            Mode::Static => config = load_static(image),
         }
     } else {
         match detect_wp_type(image) {
-            Some(Mode::Static) => {
-                config = load_static(image)
-            }
-            Some(Mode::Dynamic) => {
-                config = load_dynamic(image)
-            }
+            Some(Mode::Static) => config = load_static(image),
+            Some(Mode::Dynamic) => config = load_dynamic(image),
             None => {
                 eprintln!("Could not determine wallpaper type, please specify dynamic or static.");
                 std::process::exit(1);
             }
         }
     }
-
 
     // dbg!(config.current_transition());
 
@@ -232,7 +228,7 @@ fn main() {
 fn load_dynamic(image: &str) -> Metadata {
     let res = MetadataReader::read(image);
     if let Ok(conf) = res {
-        return conf
+        return conf;
     } else {
         eprintln!("Could not load {} as dynamic background: {:?}", image, res);
         std::process::exit(1);
@@ -243,15 +239,14 @@ fn load_static(image: &str) -> Metadata {
     MetadataReader::stat(image)
 }
 
-
 // Only detect based on their suffix for now, if any changes are made including
 // which files to accept we might need to expand this enum here
 fn detect_wp_type(image: &str) -> Option<Mode> {
     if image.ends_with(".xml") {
-        return Some(Mode::Dynamic)
+        return Some(Mode::Dynamic);
     }
     if image.ends_with(".png") {
-        return Some(Mode::Static)
+        return Some(Mode::Static);
     }
     None
 }

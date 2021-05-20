@@ -94,16 +94,14 @@ impl MetadataReader {
         Metadata {
             start_time: Local::now().naive_local(),
             total_duration_sec: u64::max_value(),
-            image_transisitons: vec!(
-                Transition {
-                    kind: "overlay".to_owned(),
-                    duration_static: u32::max_value(),
-                    duration_transition: 0,
-                    time_range: 0..u64::max_value(),
-                    from: path.to_string(),
-                    to: path.to_string(),
-                }
-            ),
+            image_transisitons: vec![Transition {
+                kind: "overlay".to_owned(),
+                duration_static: u32::max_value(),
+                duration_transition: 0,
+                time_range: 0..u64::max_value(),
+                from: path.to_string(),
+                to: path.to_string(),
+            }],
         }
     }
 }
