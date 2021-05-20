@@ -11,8 +11,8 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 
 - [X] Show Static Image
 - [X] Show Dynamic Wallpapers
-- [ ] Set Different Scaling Modes
-- [ ] Set Wallpaper Filter Algorithm
+- [X] Set Different Scaling Modes
+- [X] Set Wallpaper Filter Algorithm
 
 ## Known Limitations / TODOs
 
