@@ -156,6 +156,7 @@ dependencies = [
  "glib",
  "gtk",
  "gtk-layer-shell",
+ "log",
  "serde",
  "serde-xml-rs",
  "wayland-client",

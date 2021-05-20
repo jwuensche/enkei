@@ -15,6 +15,7 @@ enum Response {
 use super::{BackgroundManager, OutputState};
 use crate::metadata;
 use gtk::prelude::*;
+use log::debug;
 use metadata::Transition;
 
 pub fn calc_interval(transition_duration: u32) -> u32 {
@@ -32,7 +33,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             let elapsed = start.elapsed().as_millis();
             if elapsed > length as u128 {
                 let factor = (elapsed / length as u128) + 1;
-                println!(
+                debug!(
                     "System too slow, increasing frame time by factor {}",
                     factor
                 );
@@ -44,11 +45,11 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                 });
                 return glib::Continue(false);
             }
-            println!("Elapsed: {}ms", start.elapsed().as_millis());
+            debug!("Elapsed: {}ms", start.elapsed().as_millis());
             glib::Continue(true)
         }
         TransitionState::AnimationStart(slide) => {
-            dbg!("ANIMATION_WRAPPER");
+            debug!("{}", "ANIMATION_WRAPPER");
             for output in bm.monitors.iter_mut() {
                 output.time = std::time::Instant::now();
             }
@@ -65,7 +66,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             // Load new Image and send loop to create next transition
             let slide;
             let progress;
-            dbg!("SLIDE");
+            debug!("{}", "SLIDE");
             match bm.config.current().unwrap() {
                 metadata::State::Static(p, tr) => {
                     progress = p;
@@ -86,7 +87,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                 });
             } else {
                 // Animation has started let's hurry up!
-                dbg!("ANIMATION_RUSH");
+                debug!("{}", "ANIMATION_RUSH");
                 glib::timeout_add_local(calc_interval(slide.duration_transition), move || {
                     main_tick(
                         bm.clone(),
@@ -105,7 +106,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
 }
 
 fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
-    dbg!("ANIMATION");
+    debug!("{}", "ANIMATION");
     for output in outputs.iter_mut() {
         let per = (output.time.elapsed().as_millis() as f64
             / (output.duration_in_sec * 1000) as f64)
@@ -113,7 +114,7 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
         if per < 1.0 {
             // The composite pixbuf is inefficient let's try cairo
             // let ctx = cairo::Context::new(&output.image_from);
-            dbg!(per);
+            debug!("{}", per);
             let geometry = output.monitor.get_geometry();
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
