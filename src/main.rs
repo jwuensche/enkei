@@ -2,16 +2,12 @@ extern crate gtk_layer_shell as gls;
 
 use cairo::{Context, ImageSurface};
 use gdk::{Display, Monitor, Rectangle};
-use gdk_pixbuf::{InterpType, Pixbuf};
 use gio::prelude::*;
-use glib::{self, timeout_add_local};
 use gtk::{prelude::*, Image};
 use metadata::{Metadata, MetadataReader};
 use timesync::main_tick;
 use clap::{App, Arg, arg_enum, value_t};
 use gio::ApplicationFlags;
-
-use std::{env::args, fs::OpenOptions};
 
 mod image;
 mod metadata;
@@ -38,49 +34,92 @@ pub struct BackgroundManager {
     monitors: Vec<OutputState>,
     config: Metadata,
     app: gtk::Application,
+    scaling: Scaling,
+    filter: Filter,
 }
 
+impl Scaling {
+    fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+        match self {
+            Scaling::Fill => {
+                Scaling::fill(sur, geometry, filter)
+            }
+            Scaling::Fit => {
+                Scaling::fit(sur, geometry, filter)
+            }
+            Scaling::None => {
+                Scaling::none(sur, geometry)
+            }
+        }
 
+    }
 
-pub fn scale_or_crop(buf: &ImageSurface, geometry: &Rectangle) -> ImageSurface {
-    // 1. Crop the image if necessary
-    // 2. Scale the image to the proper size
+    fn none(buf: &ImageSurface, geometry: &Rectangle) -> ImageSurface {
+        let pad_width = (geometry.width - buf.get_width()) as f64 /2.0;
+        let pad_height = (geometry.height - buf.get_height()) as f64 /2.0;
 
-    let height_ratio = geometry.height as f64 / buf.get_height() as f64;
-    let width_ratio = geometry.width as f64 / buf.get_width() as f64;
-    let max_ratio = height_ratio.max(width_ratio);
+        let target = {
+            let target =
+                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
+                    .unwrap();
+            let ctx = cairo::Context::new(&target);
+            ctx.set_source_surface(buf, pad_width, pad_height);
+            ctx.paint();
 
-    // Get cropping edges (aspect)
-    let crop_height = ((buf.get_height() as f64 * max_ratio) as i32)
-        .checked_sub(geometry.height)
-        .map(|elem| (elem / 2) as f64 / max_ratio)
-        .unwrap_or(0.0)
-        .clamp(0.0, geometry.height as f64);
-    let crop_width = ((buf.get_width() as f64 * max_ratio) as i32)
-        .checked_sub(geometry.width)
-        .map(|elem| (elem / 2) as f64 / max_ratio)
-        .unwrap_or(0.0)
-        .clamp(0.0, geometry.width as f64);
+            target
+        };
 
-    // Create context and scale and crop to fit
-    let target = {
-        let target =
-            cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
-                .unwrap();
-        let ctx = cairo::Context::new(&target);
-        ctx.scale(max_ratio, max_ratio);
-        ctx.set_source_surface(buf, -(crop_width as f64), -(crop_height));
-        ctx.get_source().set_filter(cairo::Filter::Good);
-        ctx.paint();
+        return target;
+    }
 
-        target
-    };
+    fn fit(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+        Scaling::fill_or_fit(buf, geometry, filter, f64::min)
+    }
 
-    return target;
+    fn fill(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+        Scaling::fill_or_fit(buf, geometry, filter, f64::max)
+    }
+
+    fn fill_or_fit<F: Fn(f64,f64) -> f64>(buf: &ImageSurface, geometry: &Rectangle, filter: Filter, comp: F) -> ImageSurface {
+
+        // 1. Crop the image if necessary
+        // 2. Scale the image to the proper size
+
+        let height_ratio = geometry.height as f64 / buf.get_height() as f64;
+        let width_ratio = geometry.width as f64 / buf.get_width() as f64;
+        let max_ratio = comp(height_ratio,width_ratio);
+
+        // Get cropping edges (aspect)
+        let crop_height = ((buf.get_height() as f64 * max_ratio) as i32)
+            .checked_sub(geometry.height)
+            .map(|elem| (elem / 2) as f64 / max_ratio)
+            .unwrap_or(0.0)
+            .clamp(-geometry.height as f64, geometry.height as f64);
+        let crop_width = ((buf.get_width() as f64 * max_ratio) as i32)
+            .checked_sub(geometry.width)
+            .map(|elem| (elem / 2) as f64 / max_ratio)
+            .unwrap_or(0.0)
+            .clamp(-geometry.width as f64, geometry.width as f64);
+        // Create context and scale and crop to fit
+        let target = {
+            let target =
+                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
+                    .unwrap();
+            let ctx = cairo::Context::new(&target);
+            ctx.scale(max_ratio, max_ratio);
+            ctx.set_source_surface(buf, -crop_width, -crop_height);
+            ctx.get_source().set_filter(filter.into());
+            ctx.paint();
+
+            target
+        };
+
+        return target;
+    }
 }
 
 impl BackgroundManager {
-    pub fn new(config: Metadata) -> Result<Self, String> {
+    pub fn new(config: Metadata, filter: Filter, scaling: Scaling) -> Result<Self, String> {
         let mut monitors = vec![];
         // initialize gdk to find attached monitors at this stage is already
         gdk::init();
@@ -111,6 +150,8 @@ impl BackgroundManager {
             monitors,
             config,
             app,
+            filter,
+            scaling
         };
         bm.init_and_load()?;
         Ok(bm)
@@ -148,8 +189,8 @@ impl BackgroundManager {
 
         for output in self.monitors.iter_mut() {
             output.duration_in_sec = transition.duration_transition as u64;
-            output.image_from = scale_or_crop(&first, &output.monitor.get_geometry());
-            output.image_to = scale_or_crop(&second, &output.monitor.get_geometry());
+            output.image_from = self.scaling.scale(&first, &output.monitor.get_geometry(), self.filter);
+            output.image_to = self.scaling.scale(&second, &output.monitor.get_geometry(), self.filter);
             let ctx = Context::new(&output.image_from);
             ctx.set_source_surface(&output.image_to, 0.0, 0.0);
             ctx.paint_with_alpha(progress as f64 / transition.duration_transition as f64);
@@ -194,7 +235,7 @@ impl BackgroundManager {
 }
 
 arg_enum!{
-    #[derive(PartialEq, Debug)]
+    #[derive(PartialEq, Debug, Clone)]
     pub enum Scaling {
         Fill,
         Fit,
@@ -211,7 +252,7 @@ arg_enum!{
 }
 
 arg_enum!{
-    #[derive(PartialEq, Debug)]
+    #[derive(PartialEq, Debug, Clone, Copy)]
     pub enum Filter {
         Fast,
         Good,
@@ -219,6 +260,20 @@ arg_enum!{
         Nearest,
         Bilinear,
         Gaussian,
+    }
+}
+
+
+impl Into<cairo::Filter> for Filter {
+    fn into(self) -> cairo::Filter {
+        match self {
+            Filter::Fast => cairo::Filter::Fast,
+            Filter::Good => cairo::Filter::Good,
+            Filter::Best => cairo::Filter::Best,
+            Filter::Nearest => cairo::Filter::Nearest,
+            Filter::Bilinear => cairo::Filter::Bilinear,
+            Filter::Gaussian => cairo::Filter::Gaussian,
+        }
     }
 }
 
@@ -262,6 +317,7 @@ fn main() {
              .takes_value(true)
              .possible_values(&Scaling::variants())
              .case_insensitive(true)
+             .default_value("fill")
              .short("s")
              .long("scale"))
         .arg(Arg::with_name(FILTER)
@@ -270,14 +326,15 @@ fn main() {
              .takes_value(true)
              .short("f")
              .long("filter")
+             .default_value("good")
              .possible_values(&Filter::variants())
              .case_insensitive(true))
         .get_matches();
 
     let image = matches.value_of(FILE).expect("No FILE given");
 
-    let scaling: Option<Scaling> = value_t!(matches, SCALE, Scaling).ok();
-    let filter: Option<Filter> = value_t!(matches, FILTER, Filter).ok();
+    let scaling: Scaling = value_t!(matches, SCALE, Scaling).expect("Something went wrong decoding the given scale mode.");
+    let filter: Filter = value_t!(matches, FILTER, Filter).expect("Something went wrong decoding the given filter.");
     let mode: Option<Mode> =  value_t!(matches, MODE, Mode).ok();
 
     let config;
@@ -308,14 +365,12 @@ fn main() {
 
     // dbg!(config.current_transition());
 
-    if let Ok(bm) = BackgroundManager::new(config) {
+    if let Ok(bm) = BackgroundManager::new(config, filter, scaling) {
         bm.run()
     } else {
         eprintln!("Could not load config.")
     }
 }
-
-use anyhow::Result;
 
 fn load_dynamic(image: &str) -> Metadata {
     let res = MetadataReader::read(image);
