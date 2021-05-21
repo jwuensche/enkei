@@ -1,9 +1,8 @@
-# enkei (遠景)
+# enkei
 
-A modern wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei` was
-the possibility to display dynamic and changing wallpapers compatible with the
-Gnome wallpaper specification. This wallpaper tool uses
-[gtk-layer-shell](https://github.com/wmww/gtk-layer-shell) to render backgrounds
+A modern wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei`
+the option to display dynamic wallpapers compatible with the
+Gnome wallpaper specification. This wallpaper tool uses [gtk-layer-shell](https://github.com/wmww/gtk-layer-shell) to render backgrounds
 on all monitors. It has been tested in sway but should be compatible in general
 with all compositors supporting the [wlr-layer-shell protocol](https://github.com/swaywm/wlr-protocols/blob/master/unstable/wlr-layer-shell-unstable-v1.xml).
 
@@ -13,16 +12,18 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 - [X] Show Dynamic Wallpapers
 - [X] Set Different Scaling Modes
 - [X] Set Wallpaper Filter Algorithm
+- [X] Most common image formats supported (PNG, JPG, TIF,...)
+
+> Under the hood we use [image](https://crates.io/crates/image) which provides the most common image types, have a look on their documentation
+
+## Related Projects
+
+- [swaybg](https://github.com/swaywm/swaybg)
+- [mpvpaper](https://github.com/GhostNaN/mpvpaper)
+- [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
 
 ## Known Limitations / TODOs
 
-- [ ] Support more image types
-
-    > We use cairo at the moment to parse image files, due to this we only
-    > support pngs as these have official integration within cairo.  Extension
-    > could be made by adding additional parsers which then simply forward the
-    > color channels and dimensions to cairo.  Pull requests are welcome.
-    
 - [ ] More efficient image rendering for animation steps
 
     > We create new cairo surface for separate animation steps, this leads to

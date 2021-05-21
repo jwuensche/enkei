@@ -1,15 +1,16 @@
 extern crate gtk_layer_shell as gls;
+
 use cairo::ImageSurface;
 use clap::{arg_enum, value_t, App, Arg};
 use gdk::Rectangle;
 use metadata::{Metadata, MetadataReader};
+use regex::Regex;
 
 mod bg_manager;
 mod metadata;
 mod schema;
 
 use bg_manager::BackgroundManager;
-
 impl Scaling {
     fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
         match self {
@@ -214,12 +215,13 @@ fn main() {
         }
     }
 
-    // dbg!(config.current_transition());
-
-    if let Ok(bm) = BackgroundManager::new(config, filter, scaling) {
-        bm.run()
-    } else {
-        eprintln!("Could not load config.")
+    match  BackgroundManager::new(config, filter, scaling) {
+        Ok(bm) => {
+            bm.run()
+        }
+        Err(e) => {
+        eprintln!("Creation of Background Manager failed. Due to Reason: {}", e)
+        }
     }
 }
 
@@ -243,7 +245,8 @@ fn detect_wp_type(image: &str) -> Option<Mode> {
     if image.ends_with(".xml") {
         return Some(Mode::Dynamic);
     }
-    if image.ends_with(".png") {
+    let re = Regex::new(r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$").ok()?;
+    if re.is_match(image) {
         return Some(Mode::Static);
     }
     None
