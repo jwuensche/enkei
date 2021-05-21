@@ -51,7 +51,7 @@ impl MetadataReader {
             // }
             pt.iter().for_each(|elem| match elem {
                 Image::Static { duration, file } => {
-                    duration_static = duration.clone() as u32;
+                    duration_static = *duration as u32;
                     from_file = file.clone();
                 }
                 Image::Transition {
@@ -59,7 +59,7 @@ impl MetadataReader {
                 } => {
                     kind_trans = kind.clone();
                     to_file = to.clone();
-                    duration_transition = duration.clone() as u32;
+                    duration_transition = *duration as u32;
                 }
                 _ => {
                     unreachable!()
@@ -137,8 +137,7 @@ impl Metadata {
         let cur = self
             .image_transisitons
             .iter()
-            .filter(|elem| elem.time_range.contains(&diff))
-            .next()
+            .find(|elem| elem.time_range.contains(&diff))
             .ok_or("Error in search")?;
 
         Ok(
@@ -151,13 +150,5 @@ impl Metadata {
                 )
             },
         )
-    }
-
-    pub fn current_transition(&self) -> Result<Transition, String> {
-        Ok(match self.current() {
-            Ok(State::Static(_, tr)) => tr,
-            Ok(State::Transition(_, tr)) => tr,
-            Err(e) => return Err(e),
-        })
     }
 }

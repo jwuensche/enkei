@@ -66,8 +66,8 @@ impl BackgroundManager {
             monitors,
             config,
             app,
-            filter,
             scaling,
+            filter,
         };
         bm.init_and_load()?;
         Ok(bm)
@@ -149,6 +149,6 @@ impl BackgroundManager {
         let origin = self.clone();
         main_tick(origin, TransitionState::Start);
 
-        self.app.run(&vec![NAME.to_string()]);
+        self.app.run(&[NAME.to_string()]);
     }
 }

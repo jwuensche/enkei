@@ -3,7 +3,6 @@ pub enum TransitionState {
     Animation(u32),
     AnimationStart(Transition),
     Change,
-    Static,
     Start,
 }
 
@@ -98,10 +97,6 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
 
             glib::Continue(false)
         }
-        TransitionState::Static => {
-            // NO-OP this is not used yet
-            glib::Continue(true)
-        }
     }
 }
 
@@ -130,5 +125,5 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
             return Response::Finished;
         }
     }
-    return Response::Continue;
+    Response::Continue
 }

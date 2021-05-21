@@ -23,7 +23,7 @@ impl Scaling {
         let pad_width = (geometry.width - buf.get_width()) as f64 / 2.0;
         let pad_height = (geometry.height - buf.get_height()) as f64 / 2.0;
 
-        let target = {
+        {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                     .unwrap();
@@ -32,9 +32,7 @@ impl Scaling {
             ctx.paint();
 
             target
-        };
-
-        return target;
+        }
     }
 
     fn fit(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
@@ -70,7 +68,7 @@ impl Scaling {
             .unwrap_or(0.0)
             .clamp(-geometry.width as f64, geometry.width as f64);
         // Create context and scale and crop to fit
-        let target = {
+        {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                     .unwrap();
@@ -81,9 +79,7 @@ impl Scaling {
             ctx.paint();
 
             target
-        };
-
-        return target;
+        }
     }
 }
 
@@ -116,9 +112,9 @@ arg_enum! {
     }
 }
 
-impl Into<cairo::Filter> for Filter {
-    fn into(self) -> cairo::Filter {
-        match self {
+impl From<Filter> for cairo::Filter {
+    fn from(filter: Filter) -> Self {
+        match filter {
             Filter::Fast => cairo::Filter::Fast,
             Filter::Good => cairo::Filter::Good,
             Filter::Best => cairo::Filter::Best,
@@ -127,6 +123,8 @@ impl Into<cairo::Filter> for Filter {
             Filter::Gaussian => cairo::Filter::Gaussian,
         }
     }
+    // fn into(self) -> cairo::Filter {
+    // }
 }
 
 const FILE: &str = "FILE";
@@ -228,7 +226,7 @@ fn main() {
 fn load_dynamic(image: &str) -> Metadata {
     let res = MetadataReader::read(image);
     if let Ok(conf) = res {
-        return conf;
+        conf
     } else {
         eprintln!("Could not load {} as dynamic background: {:?}", image, res);
         std::process::exit(1);
