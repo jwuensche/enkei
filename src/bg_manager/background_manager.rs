@@ -23,7 +23,6 @@ pub struct OutputState {
     pub monitor: Monitor,
     pub image_from: ImageSurface,
     pub image_to: ImageSurface,
-    pub ctx: Context,
     pub duration_in_sec: u64,
     pub time: std::time::Instant,
     pub pic: Image,
@@ -49,11 +48,9 @@ impl BackgroundManager {
         for mon_id in 0..display.get_n_monitors() {
             if let Some(monitor) = display.get_monitor(mon_id) {
                 let img = ImageSurface::create(cairo::Format::ARgb32, 1, 1).unwrap();
-                let ctx = Context::new(&img);
                 monitors.push(OutputState {
                     image_from: img.clone(),
                     image_to: img,
-                    ctx,
                     monitor,
                     duration_in_sec: 5,
                     time: std::time::Instant::now(),
@@ -164,7 +161,6 @@ impl BackgroundManager {
                 gls::set_monitor(&window, &monitor.monitor);
 
                 // Set up a widget
-                monitor.pic.set_from_surface(Some(&monitor.image_from));
                 window.add(&monitor.pic);
                 window.show_all();
             }
