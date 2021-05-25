@@ -60,7 +60,7 @@ impl BackgroundManager {
         }
 
         let flags: ApplicationFlags = Default::default();
-        let app = gtk::Application::new(Some("com.gtk-layer-example"), flags)
+        let app = gtk::Application::new(Some("rocks.spacesnek.enkei"), flags)
             .expect("Initialization failed...");
 
         let mut bm = Self {
