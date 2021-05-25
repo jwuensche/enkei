@@ -10,6 +10,7 @@ anyhow = "1.0.40"
 cairo-rs = { version = "0.9.1", features = ["png"] }
 chrono = "0.4.19"
 clap = "2.33.3"
+ezing = "0.2.1"
 gdk = "0.13.2"
 gio = "0.9.1"
 glib = "0.10.3"

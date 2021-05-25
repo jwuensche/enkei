@@ -118,7 +118,7 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
             ctx.set_source_surface(&output.image_from, 0.0, 0.0);
             ctx.paint();
             ctx.set_source_surface(&output.image_to, 0.0, 0.0);
-            ctx.paint_with_alpha(per);
+            ctx.paint_with_alpha(ezing::quad_inout(per));
 
             output.pic.set_from_surface(Some(&target));
         } else {
