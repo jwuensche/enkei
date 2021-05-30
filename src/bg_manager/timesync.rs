@@ -66,18 +66,28 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             let slide;
             let progress;
             debug!("{}", "SLIDE");
-            match bm.config.current().unwrap() {
-                metadata::State::Static(p, tr) => {
+            match bm.config.current() {
+                Ok(metadata::State::Static(p, tr)) => {
                     progress = p;
                     slide = tr;
                 }
-                metadata::State::Transition(p, tr) => {
+                Ok(metadata::State::Transition(p, tr)) => {
                     progress = p + tr.duration_static;
                     slide = tr;
                 }
+                Err(e) => {
+                    eprintln!("Failed to fetch current transition state, likely a problem with implementation details or current slide show. Continuing to avoid crash...
+    Details: {}", e);
+                    return glib::Continue(true);
+                }
             }
 
-            bm.init_and_load().unwrap();
+            if let Err(e) = bm.init_and_load() {
+                eprintln!("Failed due to erroneous loading process. Continuing to avoid crash...
+Details: {}",e);
+                return glib::Continue(true);
+            }
+
             if progress < slide.duration_static {
                 // Animation not yet started
                 // Wrapper for animation
@@ -113,7 +123,7 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
             let geometry = output.monitor.get_geometry();
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
-                    .unwrap();
+                    .expect("Cannot create animaion with output geometry as defined in ticks. This is an untreatable error. Please Report.");
             let ctx = cairo::Context::new(&target);
             ctx.set_source_surface(&output.image_from, 0.0, 0.0);
             ctx.paint();

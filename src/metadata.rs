@@ -26,7 +26,7 @@ impl MetadataReader {
                 hour,
                 minute,
                 second,
-            } = config.images.get(0).unwrap()
+            } = config.images.get(0).ok_or(anyhow::Error::msg("Invalid dynamic wallpaper definition. The first item has to be a time defintion in ymdhms."))?
             {
                 NaiveDate::from_ymd(*year as i32, *month, *day).and_hms(*hour, *minute, *second)
             } else {
@@ -38,7 +38,7 @@ impl MetadataReader {
             .images
             .windows(2)
             .enumerate()
-            .filter(|e| e.0 % 2 == 1)
+            // .filter(|e| e.0 % 2 == 1)
         {
             let mut kind_trans = "".to_owned();
             let mut from_file = "".to_owned();
@@ -131,7 +131,8 @@ pub enum State {
 impl Metadata {
     pub fn current(&self) -> Result<State, String> {
         let now = Local::now().naive_local();
-
+        
+        dbg!(self.total_duration_sec);
         let diff = (now - self.start_time).num_seconds() as u64 % self.total_duration_sec;
         //dbg!(diff);
         let cur = self

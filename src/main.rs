@@ -12,7 +12,7 @@ mod schema;
 
 use bg_manager::BackgroundManager;
 impl Scaling {
-    fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+    fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
         match self {
             Scaling::Fill => Scaling::fill(sur, geometry, filter),
             Scaling::Fit => Scaling::fit(sur, geometry, filter),
@@ -20,27 +20,27 @@ impl Scaling {
         }
     }
 
-    fn none(buf: &ImageSurface, geometry: &Rectangle) -> ImageSurface {
+    fn none(buf: &ImageSurface, geometry: &Rectangle) -> Result<ImageSurface, String> {
         let pad_width = (geometry.width - buf.get_width()) as f64 / 2.0;
         let pad_height = (geometry.height - buf.get_height()) as f64 / 2.0;
 
         {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
-                    .unwrap();
+                    .map_err(|e| format!("Surface creation failed: {}", e))?;
             let ctx = cairo::Context::new(&target);
             ctx.set_source_surface(buf, pad_width, pad_height);
             ctx.paint();
 
-            target
+            Ok(target)
         }
     }
 
-    fn fit(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+    fn fit(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::min)
     }
 
-    fn fill(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> ImageSurface {
+    fn fill(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 
@@ -49,7 +49,7 @@ impl Scaling {
         geometry: &Rectangle,
         filter: Filter,
         comp: F,
-    ) -> ImageSurface {
+    ) -> Result<ImageSurface, String> {
         // 1. Crop the image if necessary
         // 2. Scale the image to the proper size
 
@@ -79,7 +79,7 @@ impl Scaling {
             ctx.get_source().set_filter(filter.into());
             ctx.paint();
 
-            target
+            Ok(target)
         }
     }
 }
@@ -215,12 +215,13 @@ fn main() {
         }
     }
 
-    match  BackgroundManager::new(config, filter, scaling) {
-        Ok(bm) => {
-            bm.run()
-        }
+    match BackgroundManager::new(config, filter, scaling) {
+        Ok(bm) => bm.run(),
         Err(e) => {
-        eprintln!("Creation of Background Manager failed. Due to Reason: {}", e)
+            eprintln!(
+                "Creation of Background Manager failed. Due to Reason: {}",
+                e
+            )
         }
     }
 }

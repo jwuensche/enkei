@@ -45,3 +45,5 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
     > The base functionality for this is already present, as each output is
     > treated individually. But higher logic and interface is missing to realize
     > this.
+    > This goes hand in hand with being able to choose on which display you want
+    > to display a wallpaper. Maybe not all should be set.

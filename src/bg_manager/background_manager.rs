@@ -42,12 +42,13 @@ impl BackgroundManager {
         let mut monitors = vec![];
         // initialize gdk to find attached monitors at this stage is already
         gdk::init();
-        gtk::init().unwrap();
+        gtk::init().map_err(|e| format!("Failed to initialize gtk: {}", e))?;
 
-        let display = Display::get_default().expect("Could not get display");
+        let display = Display::get_default().ok_or("Could not get default display.".to_string())?;
         for mon_id in 0..display.get_n_monitors() {
             if let Some(monitor) = display.get_monitor(mon_id) {
-                let img = ImageSurface::create(cairo::Format::ARgb32, 1, 1).unwrap();
+                let img = ImageSurface::create(cairo::Format::ARgb32, 1, 1)
+                    .map_err(|e| format!("Surface creation failed: {}", e))?;
                 monitors.push(OutputState {
                     image_from: img.clone(),
                     image_to: img,
@@ -61,7 +62,7 @@ impl BackgroundManager {
 
         let flags: ApplicationFlags = Default::default();
         let app = gtk::Application::new(Some("rocks.spacesnek.enkei"), flags)
-            .expect("Initialization failed...");
+            .map_err(|_| "Initialization failed...")?;
 
         let mut bm = Self {
             monitors,
@@ -90,7 +91,9 @@ impl BackgroundManager {
         // followed by red, green, and blue. Either their "upper" is the end of
         // the buffer or similar mix-ups happen in between.
         let buf = img.to_bgra8();
-        let stride = cairo::Format::ARgb32.stride_for_width(buf.width()).map_err(|_| "Stride calculation failed.")?;
+        let stride = cairo::Format::ARgb32
+            .stride_for_width(buf.width())
+            .map_err(|_| "Stride calculation failed.")?;
         // Meh more clone
         let pxls = buf.as_raw().clone();
 
@@ -99,8 +102,9 @@ impl BackgroundManager {
             cairo::Format::ARgb32,
             buf.width() as i32,
             buf.height() as i32,
-            stride
-        ).map_err(|_| "Could not create Surface from Image data".into())
+            stride,
+        )
+        .map_err(|_| "Could not create Surface from Image data".into())
     }
 
     pub fn init_and_load(&mut self) -> Result<(), String> {
@@ -123,12 +127,14 @@ impl BackgroundManager {
             output.duration_in_sec = transition.duration_transition as u64;
             output.image_from =
                 self.scaling
-                    .scale(&first, &output.monitor.get_geometry(), self.filter);
+                    .scale(&first, &output.monitor.get_geometry(), self.filter)?;
             output.image_to =
                 self.scaling
-                    .scale(&second, &output.monitor.get_geometry(), self.filter);
+                    .scale(&second, &output.monitor.get_geometry(), self.filter)?;
             let geometry = output.monitor.get_geometry();
-            let sur = cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height).unwrap();
+            let sur =
+                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
+                    .map_err(|e| format!("Surface creation failed: {}", e))?;
             let ctx = Context::new(&sur);
             ctx.set_source_surface(&output.image_from, 0.0, 0.0);
             ctx.paint();
