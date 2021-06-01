@@ -22,7 +22,7 @@ use image::DynamicImage;
 pub struct OutputState {
     pub monitor: Monitor,
     pub image_from: ImageSurface,
-    pub image_to: ImageSurface,
+    pub image_to: Option<ImageSurface>,
     pub duration_in_sec: u64,
     pub time: std::time::Instant,
     pub pic: Image,
@@ -51,7 +51,7 @@ impl BackgroundManager {
                     .map_err(|e| format!("Surface creation failed: {}", e))?;
                 monitors.push(OutputState {
                     image_from: img.clone(),
-                    image_to: img,
+                    image_to: Some(img),
                     monitor,
                     duration_in_sec: 5,
                     time: std::time::Instant::now(),
@@ -122,15 +122,18 @@ impl BackgroundManager {
         }
 
         let first = BackgroundManager::create_surface_from_path(transition.from)?;
-        let second = BackgroundManager::create_surface_from_path(transition.to)?;
+        let second = transition.to.map(|path| BackgroundManager::create_surface_from_path(path).unwrap());
         for output in self.monitors.iter_mut() {
             output.duration_in_sec = transition.duration_transition as u64;
             output.image_from =
                 self.scaling
                     .scale(&first, &output.monitor.get_geometry(), self.filter)?;
-            output.image_to =
-                self.scaling
-                    .scale(&second, &output.monitor.get_geometry(), self.filter)?;
+            if let Some(image_to) = &second {
+                output.image_to = Some(self.scaling
+                        .scale(&image_to, &output.monitor.get_geometry(), self.filter)?);
+            } else {
+                output.image_to = None;
+            }
             let geometry = output.monitor.get_geometry();
             let sur =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
@@ -138,8 +141,10 @@ impl BackgroundManager {
             let ctx = Context::new(&sur);
             ctx.set_source_surface(&output.image_from, 0.0, 0.0);
             ctx.paint();
-            ctx.set_source_surface(&output.image_to, 0.0, 0.0);
+            if let Some(image_to) = &output.image_to {
+            ctx.set_source_surface(&image_to, 0.0, 0.0);
             ctx.paint_with_alpha(progress as f64 / transition.duration_transition as f64);
+            }
             output.time =
                 std::time::Instant::now() - std::time::Duration::from_secs(progress as u64);
             output.pic.set_from_surface(Some(&sur))

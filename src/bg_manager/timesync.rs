@@ -26,6 +26,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
         TransitionState::Animation(length) => {
             let start = std::time::Instant::now();
             if let Response::Finished = animation_tick(&mut bm.monitors) {
+                debug!("Animation Finished");
                 main_tick(bm, TransitionState::Change);
                 return glib::Continue(false);
             }
@@ -48,18 +49,22 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             glib::Continue(true)
         }
         TransitionState::AnimationStart(slide) => {
-            debug!("{}", "ANIMATION_WRAPPER");
+            debug!("{}", "ANIMATION START");
             for output in bm.monitors.iter_mut() {
                 output.time = std::time::Instant::now();
             }
 
-            glib::timeout_add_local(calc_interval(slide.duration_transition), move || {
-                main_tick(
-                    bm.clone(),
-                    TransitionState::Animation(calc_interval(slide.duration_transition)),
-                )
-            });
-            glib::Continue(false)
+            if bm.monitors.get(0).unwrap().image_to.is_some() {
+                glib::timeout_add_local(calc_interval(slide.duration_transition), move || {
+                    main_tick(
+                        bm.clone(),
+                        TransitionState::Animation(calc_interval(slide.duration_transition)),
+                    )
+                });
+                glib::Continue(false)
+            } else {
+                main_tick(bm, TransitionState::Change)
+            }
         }
         TransitionState::Change | TransitionState::Start => {
             // Load new Image and send loop to create next transition
@@ -113,26 +118,28 @@ Details: {}",e);
 fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
     debug!("{}", "ANIMATION");
     for output in outputs.iter_mut() {
-        let per = (output.time.elapsed().as_millis() as f64
-            / (output.duration_in_sec * 1000) as f64)
-            .clamp(0.0, 1.0);
-        if per < 1.0 {
-            // The composite pixbuf is inefficient let's try cairo
-            // let ctx = cairo::Context::new(&output.image_from);
-            debug!("{}", per);
-            let geometry = output.monitor.get_geometry();
-            let target =
-                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
-                    .expect("Cannot create animaion with output geometry as defined in ticks. This is an untreatable error. Please Report.");
-            let ctx = cairo::Context::new(&target);
-            ctx.set_source_surface(&output.image_from, 0.0, 0.0);
-            ctx.paint();
-            ctx.set_source_surface(&output.image_to, 0.0, 0.0);
-            ctx.paint_with_alpha(ezing::quad_inout(per));
+        if let Some(image_to) = &output.image_to {
+            let per = (output.time.elapsed().as_millis() as f64
+                / (output.duration_in_sec * 1000) as f64)
+                .clamp(0.0, 1.0);
+            if per < 1.0 {
+                // The composite pixbuf is inefficient let's try cairo
+                // let ctx = cairo::Context::new(&output.image_from);
+                debug!("{}", per);
+                let geometry = output.monitor.get_geometry();
+                let target =
+                    cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
+                        .expect("Cannot create animaion with output geometry as defined in ticks. This is an untreatable error. Please Report.");
+                let ctx = cairo::Context::new(&target);
+                ctx.set_source_surface(&output.image_from, 0.0, 0.0);
+                ctx.paint();
+                ctx.set_source_surface(&image_to, 0.0, 0.0);
+                ctx.paint_with_alpha(ezing::quad_inout(per));
 
-            output.pic.set_from_surface(Some(&target));
-        } else {
-            return Response::Finished;
+                output.pic.set_from_surface(Some(&target));
+            } else {
+                return Response::Finished;
+            }
         }
     }
     Response::Continue
