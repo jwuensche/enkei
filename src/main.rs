@@ -12,7 +12,12 @@ mod schema;
 
 use bg_manager::BackgroundManager;
 impl Scaling {
-    fn scale(&self, sur: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
+    fn scale(
+        &self,
+        sur: &ImageSurface,
+        geometry: &Rectangle,
+        filter: Filter,
+    ) -> Result<ImageSurface, String> {
         match self {
             Scaling::Fill => Scaling::fill(sur, geometry, filter),
             Scaling::Fit => Scaling::fit(sur, geometry, filter),
@@ -36,11 +41,19 @@ impl Scaling {
         }
     }
 
-    fn fit(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
+    fn fit(
+        buf: &ImageSurface,
+        geometry: &Rectangle,
+        filter: Filter,
+    ) -> Result<ImageSurface, String> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::min)
     }
 
-    fn fill(buf: &ImageSurface, geometry: &Rectangle, filter: Filter) -> Result<ImageSurface, String> {
+    fn fill(
+        buf: &ImageSurface,
+        geometry: &Rectangle,
+        filter: Filter,
+    ) -> Result<ImageSurface, String> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 

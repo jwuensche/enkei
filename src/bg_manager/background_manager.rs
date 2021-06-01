@@ -121,16 +121,25 @@ impl BackgroundManager {
             }
         }
 
-        let first = BackgroundManager::create_surface_from_path(transition.from)?;
-        let second = transition.to.map(|path| BackgroundManager::create_surface_from_path(path).unwrap());
+        let first = BackgroundManager::create_surface_from_path(transition.from())?;
+
+        let second;
+        if let Some(image_path) = transition.to() {
+            second = Some(BackgroundManager::create_surface_from_path(image_path)?);
+        } else {
+            second = None;
+        }
         for output in self.monitors.iter_mut() {
-            output.duration_in_sec = transition.duration_transition as u64;
+            output.duration_in_sec = transition.duration_transition() as u64;
             output.image_from =
                 self.scaling
                     .scale(&first, &output.monitor.get_geometry(), self.filter)?;
             if let Some(image_to) = &second {
-                output.image_to = Some(self.scaling
-                        .scale(&image_to, &output.monitor.get_geometry(), self.filter)?);
+                output.image_to = Some(self.scaling.scale(
+                    &image_to,
+                    &output.monitor.get_geometry(),
+                    self.filter,
+                )?);
             } else {
                 output.image_to = None;
             }
@@ -142,8 +151,8 @@ impl BackgroundManager {
             ctx.set_source_surface(&output.image_from, 0.0, 0.0);
             ctx.paint();
             if let Some(image_to) = &output.image_to {
-            ctx.set_source_surface(&image_to, 0.0, 0.0);
-            ctx.paint_with_alpha(progress as f64 / transition.duration_transition as f64);
+                ctx.set_source_surface(&image_to, 0.0, 0.0);
+                ctx.paint_with_alpha(progress as f64 / transition.duration_transition() as f64);
             }
             output.time =
                 std::time::Instant::now() - std::time::Duration::from_secs(progress as u64);

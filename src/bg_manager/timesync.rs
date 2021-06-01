@@ -54,11 +54,11 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                 output.time = std::time::Instant::now();
             }
 
-            if bm.monitors.get(0).unwrap().image_to.is_some() {
-                glib::timeout_add_local(calc_interval(slide.duration_transition), move || {
+            if slide.is_animated() {
+                glib::timeout_add_local(calc_interval(slide.duration_transition()), move || {
                     main_tick(
                         bm.clone(),
-                        TransitionState::Animation(calc_interval(slide.duration_transition)),
+                        TransitionState::Animation(calc_interval(slide.duration_transition())),
                     )
                 });
                 glib::Continue(false)
@@ -77,7 +77,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                     slide = tr;
                 }
                 Ok(metadata::State::Transition(p, tr)) => {
-                    progress = p + tr.duration_static;
+                    progress = p + tr.duration_static();
                     slide = tr;
                 }
                 Err(e) => {
@@ -88,24 +88,27 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             }
 
             if let Err(e) = bm.init_and_load() {
-                eprintln!("Failed due to erroneous loading process. Continuing to avoid crash...
-Details: {}",e);
+                eprintln!(
+                    "Failed due to erroneous loading process. Continuing to avoid crash...
+Details: {}",
+                    e
+                );
                 return glib::Continue(true);
             }
 
-            if progress < slide.duration_static {
+            if progress < slide.duration_static() {
                 // Animation not yet started
                 // Wrapper for animation
-                glib::timeout_add_seconds_local(slide.duration_static, move || {
+                glib::timeout_add_seconds_local(slide.duration_static(), move || {
                     main_tick(bm.clone(), TransitionState::AnimationStart(slide.clone()))
                 });
             } else {
                 // Animation has started let's hurry up!
                 debug!("{}", "ANIMATION_RUSH");
-                glib::timeout_add_local(calc_interval(slide.duration_transition), move || {
+                glib::timeout_add_local(calc_interval(slide.duration_transition()), move || {
                     main_tick(
                         bm.clone(),
-                        TransitionState::Animation(calc_interval(slide.duration_transition)),
+                        TransitionState::Animation(calc_interval(slide.duration_transition())),
                     )
                 });
             }
