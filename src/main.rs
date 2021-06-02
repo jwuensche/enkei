@@ -85,7 +85,7 @@ impl Scaling {
         {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
-                    .unwrap();
+                    .map_err(|e| format!("Encountered error while creating Surface: {}", e))?;
             let ctx = cairo::Context::new(&target);
             ctx.scale(max_ratio, max_ratio);
             ctx.set_source_surface(buf, -crop_width, -crop_height);

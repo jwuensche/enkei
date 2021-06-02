@@ -6,8 +6,8 @@ use super::main_tick;
 use super::TransitionState;
 use crate::metadata;
 use crate::metadata::Metadata;
-use crate::{NAME, IDENT};
 use crate::{Filter, Scaling};
+use crate::{IDENT, NAME};
 use cairo::{Context, ImageSurface};
 use gdk::{Display, Monitor};
 use gio::prelude::*;
@@ -44,7 +44,8 @@ impl BackgroundManager {
         gdk::init();
         gtk::init().map_err(|e| format!("Failed to initialize gtk: {}", e))?;
 
-        let display = Display::get_default().ok_or_else(|| "Could not get default display.".to_string())?;
+        let display =
+            Display::get_default().ok_or_else(|| "Could not get default display.".to_string())?;
         for mon_id in 0..display.get_n_monitors() {
             if let Some(monitor) = display.get_monitor(mon_id) {
                 let img = ImageSurface::create(cairo::Format::ARgb32, 1, 1)
@@ -61,8 +62,8 @@ impl BackgroundManager {
         }
 
         let flags: ApplicationFlags = Default::default();
-        let app = gtk::Application::new(Some(IDENT), flags)
-            .map_err(|_| "Initialization failed...")?;
+        let app =
+            gtk::Application::new(Some(IDENT), flags).map_err(|_| "Initialization failed...")?;
 
         let mut bm = Self {
             monitors,
