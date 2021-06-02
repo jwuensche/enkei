@@ -1,6 +1,6 @@
 # enkei
 
-A modern wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei`
+A wayland wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei`
 the option to display dynamic wallpapers compatible with the
 Gnome wallpaper specification. This wallpaper tool uses [gtk-layer-shell](https://github.com/wmww/gtk-layer-shell) to render backgrounds
 on all monitors. It has been tested in sway but should be compatible in general
@@ -20,6 +20,7 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 
 - [swaybg](https://github.com/swaywm/swaybg)
 - [mpvpaper](https://github.com/GhostNaN/mpvpaper)
+- [oguri](https://github.com/vilhalmer/oguri)
 - [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
 
 ## Known Limitations / TODOs
@@ -36,9 +37,7 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
     > We create new cairo surface for separate animation steps, this leads to
     > more effort in copying but guarantees a linear progression in the
     > animation.  We would best change this to only apply a certain level of
-    > alpha to the image at each step halving the copy effort. But this leads
-    > with simple scaling to a skew in the animation rate. Looking for good
-    > ideas for this right now.
+    > alpha to the image at each step halving the copy effort.
     
 - [ ] Allow setting of wallpapers via IPC
 
@@ -46,6 +45,9 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
     > instance to change the wallpaper shown.  For this we would need to
     > interrupt any ongoing animations or static images and hot-swap the images
     > in the current gtk session.
+
+    > oguri has done something similar seems like a cool feature to have to
+    > avoid respawning the application.
     
 - [ ] Individual wallpapers on different displays
 

@@ -2,7 +2,7 @@
 name = "enkei"
 version = "0.1.0"
 authors = ["Johannes Wünsche <johannes@spacesnek.rocks>"]
-description = "A modern wallpaper tool with support for GNOME dynamic wallpapers"
+description = "A wayland wallpaper tool with support for GNOME dynamic wallpapers"
 homepage = "https://git.spacesnek.rocks/johannes/enkei"
 repository = "https://git.spacesnek.rocks/johannes/enkei"
 categories = ["command-line-utilities", "multimedia:images", "multimedia"]
