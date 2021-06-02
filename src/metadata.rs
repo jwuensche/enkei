@@ -10,12 +10,9 @@ pub struct MetadataReader {}
 
 impl MetadataReader {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Metadata> {
-        let config_file = OpenOptions::new()
-            .read(true)
-            .open(path)
-            .expect("File could not be openned");
+        let config_file = OpenOptions::new().read(true).open(path)?;
         let config: Background =
-            serde_xml_rs::from_reader(config_file).expect("Content could not be read");
+            serde_xml_rs::from_reader(config_file)?;
         // Sanity Checks and Transition
         let mut transitions = vec![];
         let start_time = {
