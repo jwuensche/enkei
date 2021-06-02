@@ -17,8 +17,14 @@ use gtk::prelude::*;
 use log::debug;
 use metadata::Transition;
 
+const SIXTYFPS: f32= 1000.0/60.0;
+
 pub fn calc_interval(transition_duration: u32) -> u32 {
-    ((transition_duration * 1000) as f64 / 60.0).clamp(1.0, 60000.0) as u32
+    if transition_duration <= 5 {
+        SIXTYFPS as u32
+    } else {
+        ((transition_duration * 1000) as f64 / 60.0).clamp(1.0, 60000.0) as u32
+    }
 }
 
 pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Continue {
