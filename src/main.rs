@@ -147,6 +147,7 @@ const SCALE: &str = "SCALE";
 const FILTER: &str = "FILTER";
 
 const NAME: &str = env!("CARGO_PKG_NAME");
+const IDENT: &str = "rocks.spacesnek.enkei";
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 const DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 const VERSION: &str = env!("CARGO_PKG_VERSION");

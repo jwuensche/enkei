@@ -26,7 +26,7 @@ impl MetadataReader {
                 hour,
                 minute,
                 second,
-            } = config.images.get(0).ok_or(anyhow::Error::msg("Invalid dynamic wallpaper definition. The first item has to be a time defintion in ymdhms."))?
+            } = config.images.get(0).ok_or_else(|| anyhow::Error::msg("Invalid dynamic wallpaper definition. The first item has to be a time defintion in ymdhms."))?
             {
                 NaiveDate::from_ymd(*year as i32, *month, *day).and_hms(*hour, *minute, *second)
             } else {
