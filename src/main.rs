@@ -212,6 +212,11 @@ fn main() {
         value_t!(matches, FILTER, Filter).expect("Something went wrong decoding the given filter.");
     let mode: Option<Mode> = value_t!(matches, MODE, Mode).ok();
 
+    if let Err(e) = std::fs::OpenOptions::new().read(true).open(image) {
+        eprintln!("Could not open file {}: {}", image, e);
+        std::process::exit(1);
+    }
+
     let config;
     if let Some(chosen_mode) = mode {
         match chosen_mode {
