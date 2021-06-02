@@ -24,6 +24,13 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 
 ## Known Limitations / TODOs
 
+- [ ] Handle Output Changes
+    > It would be a nice to have to handle addition and removal of monitors
+    > while running.  Changes required would be to connect to the gdk
+    > DisplayManager and interact with these proclaimed changes. The delay in
+    > which this should happen is best to be kept low, so long-time animations
+    > will have to interrupted.
+
 - [ ] More efficient image rendering for animation steps
 
     > We create new cairo surface for separate animation steps, this leads to
@@ -43,7 +50,6 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 - [ ] Individual wallpapers on different displays
 
     > The base functionality for this is already present, as each output is
-    > treated individually. But higher logic and interface is missing to realize
-    > this.
-    > This goes hand in hand with being able to choose on which display you want
-    > to display a wallpaper. Maybe not all should be set.
+    > treated individually. But higher logic and interface is missing to
+    > realize this.  This goes hand in hand with being able to choose on which
+    > display you want to display a wallpaper. Maybe not all should be set.
