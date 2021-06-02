@@ -155,7 +155,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const FILE_HELP: &str = "The path to the wallpaper to be shown. The mode, static or dynamic gets determined automatically by default, based on the file suffix.";
 const MODE_HELP: &str = "The display mode, static or dynamic, to be used for the given wallpaper. Normally this gets detected automatically based on the file suffix. If this is not possible set it explicitly here.";
 const SCALE_HELP: &str = "The scaling mode, which should be used to fit the image to the screen. Fit will try to fit the whole image to the screen, while Fill will try to fill the screen completely upscaling and cropping the image if necessary.";
-const FILTER_HELP: &str = "The filter method which should be applied when a wallpaper is scaled. Varitants correspond to cairo filters.";
+const FILTER_HELP: &str = "The filter method which should be applied when a wallpaper is scaled. Variants correspond to cairo filters.";
 
 fn main() {
     let matches = App::new(NAME)
