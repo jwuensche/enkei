@@ -132,13 +132,9 @@ impl Transition {
     pub fn duration_static(&self) -> u32 {
         match self {
             Transition::WithAnimation {
-                duration_static,
-                ..
+                duration_static, ..
             } => *duration_static,
-            Transition::WithoutAnimation {
-                duration,
-                ..
-            } => *duration,
+            Transition::WithoutAnimation { duration, .. } => *duration,
         }
     }
 
@@ -148,58 +144,35 @@ impl Transition {
                 duration_transition,
                 ..
             } => *duration_transition,
-            Transition::WithoutAnimation {
-                ..
-            } => 0,
+            Transition::WithoutAnimation { .. } => 0,
         }
     }
 
     pub fn is_animated(&self) -> bool {
         match self {
-            Transition::WithAnimation {
-                ..
-            } => true,
-            Transition::WithoutAnimation {
-                ..
-            } => false,
+            Transition::WithAnimation { .. } => true,
+            Transition::WithoutAnimation { .. } => false,
         }
     }
 
     pub fn time_range(&self) -> &Range<u64> {
         match self {
-            Transition::WithAnimation {
-                time_range,
-                ..
-            } => time_range,
-            Transition::WithoutAnimation {
-                time_range,
-                ..
-            } => time_range,
+            Transition::WithAnimation { time_range, .. } => time_range,
+            Transition::WithoutAnimation { time_range, .. } => time_range,
         }
     }
 
     pub fn from(&self) -> &String {
         match self {
-            Transition::WithAnimation {
-                from,
-                ..
-            } => from,
-            Transition::WithoutAnimation {
-                from,
-                ..
-            } => from,
+            Transition::WithAnimation { from, .. } => from,
+            Transition::WithoutAnimation { from, .. } => from,
         }
     }
 
     pub fn to(&self) -> Option<&String> {
         match self {
-            Transition::WithAnimation {
-                to,
-                ..
-            } => Some(to),
-            Transition::WithoutAnimation {
-                ..
-            } => None,
+            Transition::WithAnimation { to, .. } => Some(to),
+            Transition::WithoutAnimation { .. } => None,
         }
     }
 }
