@@ -8,7 +8,6 @@ repository = "https://git.spacesnek.rocks/johannes/enkei"
 categories = ["command-line-utilities", "multimedia:images", "multimedia"]
 readme = "README.md"
 license = "MIT"
-license_file = "LICENSE.txt"
 keywords = ["sway", "wlroots", "wallpaper", "background", "gnome"]
 edition = "2018"
 
