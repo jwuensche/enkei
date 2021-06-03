@@ -18,12 +18,11 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 
 ## Options
 
-| flag | purpose/variants                                                 |
-|:-----|:-----------------------------------------------------------------|
-| `-f` | Filter Methods (Fast, Good, Best, Nearest, Bilinear, Gaussian)   |
-| `-m` | Display Mode (Dynamic, Static) (this is autodetected by default) |
-| `-s` | Scale (Fill, Fit, None)                                          |
-
+| flag | purpose/variants                                                               |
+|:-----|:-------------------------------------------------------------------------------|
+| `-f` | Filter Methods (Fast, Good, Best, Nearest, Bilinear, Gaussian) [default: Good] |
+| `-m` | Display Mode (Dynamic, Static) [default: Autodetect]                           |
+| `-s` | Scale (Fill, Fit, None) [default: Fill]                                        |
 
 ## Related Projects
 
