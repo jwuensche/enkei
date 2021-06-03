@@ -6,6 +6,10 @@ Gnome wallpaper specification. This wallpaper tool uses [gtk-layer-shell](https:
 on all monitors. It has been tested in sway but should be compatible in general
 with all compositors supporting the [wlr-layer-shell protocol](https://github.com/swaywm/wlr-protocols/blob/master/unstable/wlr-layer-shell-unstable-v1.xml).
 
+<video width="100%" controls muted alt="A video showing a sped up desktop with enkei running.">
+  <source src="data/demo.webm" type="video/webm">
+</video>
+
 ## Features
 
 - [X] Show Static Image
