@@ -38,6 +38,7 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
 ## Known Limitations / TODOs
 
 - [ ] Handle Output Changes
+
     > It would be a nice to have to handle addition and removal of monitors
     > while running.  Changes required would be to connect to the gdk
     > DisplayManager and interact with these proclaimed changes. The delay in
