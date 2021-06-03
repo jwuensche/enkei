@@ -114,7 +114,7 @@ impl BackgroundManager {
         match self.config.current()? {
             metadata::State::Static(_, tr) => {
                 transition = tr;
-                progress = 0;
+                progress = 0f64;
             }
             metadata::State::Transition(p, tr) => {
                 transition = tr;

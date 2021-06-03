@@ -19,12 +19,16 @@ use metadata::Transition;
 
 const SIXTYFPS: f32= 1000.0/60.0;
 
-pub fn calc_interval(transition_duration: u32) -> u32 {
-    if transition_duration <= 5 {
+pub fn calc_interval(transition_duration: f64) -> u32 {
+    if transition_duration <= 5.0 {
         SIXTYFPS as u32
     } else {
-        ((transition_duration * 1000) as f64 / 60.0).clamp(1.0, 60000.0) as u32
+        ((transition_duration * 1000 as f64) / 60.0).clamp(1.0, 60000.0) as u32
     }
+}
+
+pub fn calc_seconds_to_milli(dur: f64) -> u32 {
+    (dur * 1000 as f64) as u32
 }
 
 pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Continue {
@@ -105,7 +109,7 @@ Details: {}",
             if progress < slide.duration_static() {
                 // Animation not yet started
                 // Wrapper for animation
-                glib::timeout_add_seconds_local(slide.duration_static(), move || {
+                glib::timeout_add_local(calc_seconds_to_milli(slide.duration_static()), move || {
                     main_tick(bm.clone(), TransitionState::AnimationStart(slide.clone()))
                 });
             } else {

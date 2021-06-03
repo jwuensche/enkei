@@ -30,17 +30,17 @@ impl MetadataReader {
                 return Err(anyhow::Error::msg("First item is not starting time"));
             }
         };
-        let mut elapsed = 0u64;
+        let mut elapsed = 0f64;
 
         let mut entry_iter = config.images.iter().peekable();
 
         while let Some(next) = entry_iter.next() {
             let mut from_file = "".to_owned();
-            let mut duration_static = 0;
-            let mut duration_transition = 0;
+            let mut duration_static = 0f64;
+            let mut duration_transition = 0f64;
 
             if let Image::Static { duration, file } = &next {
-                duration_static = *duration as u32;
+                duration_static = *duration;
                 from_file = file.clone();
             }
 
@@ -50,9 +50,9 @@ impl MetadataReader {
             {
                 let kind_trans = kind.clone();
                 let to_file = to.clone();
-                duration_transition = *duration as u32;
+                duration_transition = *duration;
 
-                let duration = elapsed + duration_static as u64 + duration_transition as u64;
+                let duration = elapsed + duration_static + duration_transition;
                 transitions.push(Transition::WithAnimation {
                     kind: kind_trans,
                     from: from_file,
@@ -64,7 +64,7 @@ impl MetadataReader {
                 elapsed = duration;
                 entry_iter.next();
             } else {
-                let duration = elapsed + duration_static as u64 + duration_transition as u64;
+                let duration = elapsed + duration_static + duration_transition;
                 transitions.push(Transition::WithoutAnimation {
                     from: from_file,
                     time_range: (elapsed..duration),
@@ -74,8 +74,8 @@ impl MetadataReader {
             }
         }
 
-        let total_duration_sec = transitions.iter().fold(0, |acc, elem| {
-            acc + elem.duration_static() as u64 + elem.duration_transition() as u64
+        let total_duration_sec = transitions.iter().fold(0f64, |acc, elem| {
+            acc + elem.duration_static() + elem.duration_transition()
         });
 
         let meta_config = Metadata {
@@ -89,10 +89,10 @@ impl MetadataReader {
     pub fn stat(path: &str) -> Metadata {
         Metadata {
             start_time: Local::now().naive_local(),
-            total_duration_sec: u64::max_value(),
+            total_duration_sec: f64::MAX,
             image_transisitons: vec![Transition::WithoutAnimation {
-                duration: u32::max_value(),
-                time_range: 0..u64::max_value(),
+                duration: f64::MAX,
+                time_range: 0f64..f64::MAX,
                 from: path.to_string(),
             }],
         }
@@ -112,21 +112,21 @@ impl MetadataReader {
 pub enum Transition {
     WithAnimation {
         kind: String,
-        duration_static: u32,
-        duration_transition: u32,
-        time_range: Range<u64>,
+        duration_static: f64,
+        duration_transition: f64,
+        time_range: Range<f64>,
         from: String,
         to: String,
     },
     WithoutAnimation {
-        duration: u32,
-        time_range: Range<u64>,
+        duration: f64,
+        time_range: Range<f64>,
         from: String,
     },
 }
 
 impl Transition {
-    pub fn duration_static(&self) -> u32 {
+    pub fn duration_static(&self) -> f64 {
         match self {
             Transition::WithAnimation {
                 duration_static, ..
@@ -135,13 +135,13 @@ impl Transition {
         }
     }
 
-    pub fn duration_transition(&self) -> u32 {
+    pub fn duration_transition(&self) -> f64 {
         match self {
             Transition::WithAnimation {
                 duration_transition,
                 ..
             } => *duration_transition,
-            Transition::WithoutAnimation { .. } => 0,
+            Transition::WithoutAnimation { .. } => 0f64,
         }
     }
 
@@ -152,7 +152,7 @@ impl Transition {
         }
     }
 
-    pub fn time_range(&self) -> &Range<u64> {
+    pub fn time_range(&self) -> &Range<f64> {
         match self {
             Transition::WithAnimation { time_range, .. } => time_range,
             Transition::WithoutAnimation { time_range, .. } => time_range,
@@ -178,19 +178,19 @@ impl Transition {
 pub struct Metadata {
     start_time: NaiveDateTime,
     image_transisitons: Vec<Transition>,
-    total_duration_sec: u64,
+    total_duration_sec: f64,
 }
 
 pub enum State {
-    Static(u32, Transition),
-    Transition(u32, Transition),
+    Static(f64, Transition),
+    Transition(f64, Transition),
 }
 
 impl Metadata {
     pub fn current(&self) -> Result<State, String> {
         let now = Local::now().naive_local();
 
-        let diff = (now - self.start_time).num_seconds() as u64 % self.total_duration_sec;
+        let diff = (now - self.start_time).num_seconds() as f64 % self.total_duration_sec;
         let cur = self
             .image_transisitons
             .iter()
@@ -198,11 +198,11 @@ impl Metadata {
             .ok_or("Error in search")?;
 
         Ok(
-            if diff - cur.time_range().start < cur.duration_static() as u64 {
-                State::Static((diff - cur.time_range().start) as u32, cur.clone())
+            if diff - cur.time_range().start < cur.duration_static() {
+                State::Static(diff - cur.time_range().start, cur.clone())
             } else {
                 State::Transition(
-                    (diff - cur.time_range().start - cur.duration_static() as u64) as u32,
+                    diff - cur.time_range().start - cur.duration_static(),
                     cur.clone(),
                 )
             },

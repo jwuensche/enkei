@@ -18,12 +18,12 @@ pub enum Image {
         second: u32,
     },
     #[serde(rename = "static")]
-    Static { duration: f32, file: String },
+    Static { duration: f64, file: String },
     #[serde(rename = "transition")]
     Transition {
         #[serde(rename = "type")]
         kind: String,
-        duration: f32,
+        duration: f64,
         from: String,
         to: String,
     },
