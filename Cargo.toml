@@ -27,3 +27,12 @@ log = "0.4.14"
 regex = "1.5.4"
 serde = { version = "1.0.125", features = ["derive"] }
 serde-xml-rs = "0.4.1"
+
+[package.metadata.rpm]
+package = "enkei"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+enkei = { path = "/usr/bin/enkei" }
