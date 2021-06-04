@@ -6,9 +6,63 @@ Gnome wallpaper specification. This wallpaper tool uses [gtk-layer-shell](https:
 on all monitors. It has been tested in sway but should be compatible in general
 with all compositors supporting the [wlr-layer-shell protocol](https://github.com/swaywm/wlr-protocols/blob/master/unstable/wlr-layer-shell-unstable-v1.xml).
 
-<video width="100%" controls muted alt="A video showing a sped up desktop with enkei running.">
+<video width="100%" controls muted loop alt="A video showing a sped up desktop with enkei running.">
   <source src="data/demo.webm" type="video/webm">
 </video>
+
+## Installation
+
+### Available Packages
+
+Prebuilt images are currently only available for Fedora 33/34/rawhide via [copr](https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/).
+
+Add the copr to your system and install `enkei` with:
+
+```shell
+# dnf copr enable jwuensche/wayland-tools 
+# dnf install enkei
+```
+
+Patches for packaging of any other distribution are welcome, and will be merged gladly. 
+
+### Manual
+
+If no packages are available for your distribution, you want to manually install, or develop on `enkei` you can build it yourself locally with the following steps.
+
+#### Requirements
+
+Make sure you have to following dependencies installed:
+```
+git
+cargo 
+rust
+glibc-devel
+gtk3-devel
+gtk-layer-shell-devel
+```
+
+### Building the project
+
+To build the project then clone it and from within the cloned directory:
+
+``` sh
+$ cargo build
+```
+
+### Installing from Local Build
+
+You can either install `enkei` via a cargo, to your `$CARGO_BIN` directory
+
+``` sh
+$ cargo install --path .
+```
+
+or to any other arbitrary directory in your path e.g. `/usr/local/bin`.
+
+``` sh
+$ cargo build --release
+$ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
+```
 
 ## Features
 
