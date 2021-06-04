@@ -254,6 +254,7 @@ dependencies = [
  "gtk",
  "gtk-layer-shell",
  "image",
+ "lazy-regex",
  "log",
  "regex",
  "serde",
@@ -653,6 +654,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "229d53d58899083193af11e15917b5640cd40b29ff475a1fe4ef725deb02d0f2"
 dependencies = [
  "rayon",
+]
+
+[[package]]
+name = "lazy-regex"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b00f3e4d8dc7bedf8f0947c7079bfe11f5dba7a96d95c8340c851eec8ffc41e"
+dependencies = [
+ "lazy-regex-proc_macros",
+ "once_cell",
+ "regex",
+]
+
+[[package]]
+name = "lazy-regex-proc_macros"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd6f321bbea1296f0fe12342fdf3e8eaf0b871b80b8a2dc37337e05cfe364c8d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn",
 ]
 
 [[package]]

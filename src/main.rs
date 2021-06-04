@@ -4,7 +4,7 @@ use cairo::ImageSurface;
 use clap::{arg_enum, value_t, App, Arg};
 use gdk::Rectangle;
 use metadata::{Metadata, MetadataReader};
-use regex::Regex;
+use lazy_regex::regex_is_match;
 
 mod bg_manager;
 mod metadata;
@@ -265,8 +265,7 @@ fn detect_wp_type(image: &str) -> Option<Mode> {
     if image.ends_with(".xml") {
         return Some(Mode::Dynamic);
     }
-    let re = Regex::new(r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$").ok()?;
-    if re.is_match(image) {
+    if regex_is_match!(r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$", image) {
         return Some(Mode::Static);
     }
     None
