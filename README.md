@@ -10,6 +10,31 @@ with all compositors supporting the [wlr-layer-shell protocol](https://github.co
   <source src="data/demo.webm" type="video/webm">
 </video>
 
+## Features
+
+- [X] Show Static Image
+- [X] Show Dynamic Wallpapers
+- [X] Set Different Scaling Modes
+- [X] Set Wallpaper Filter Algorithm
+- [X] Most common image formats supported (PNG, JPG, TIF,...)
+
+> Under the hood we use [image](https://crates.io/crates/image) which provides the most common image types, have a look on their documentation
+
+## Options
+
+| flag | purpose/variants                                                               |
+|:-----|:-------------------------------------------------------------------------------|
+| `-f` | Filter Methods (Fast, Good, Best, Nearest, Bilinear, Gaussian) [default: Good] |
+| `-m` | Display Mode (Dynamic, Static) [default: Autodetect]                           |
+| `-s` | Scale (Fill, Fit, None) [default: Fill]                                        |
+
+## Related Projects
+
+- [swaybg](https://github.com/swaywm/swaybg)
+- [mpvpaper](https://github.com/GhostNaN/mpvpaper)
+- [oguri](https://github.com/vilhalmer/oguri)
+- [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
+
 ## Installation
 
 ### Available Packages
@@ -63,31 +88,6 @@ or to any other arbitrary directory in your path e.g. `/usr/local/bin`.
 $ cargo build --release
 $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
 ```
-
-## Features
-
-- [X] Show Static Image
-- [X] Show Dynamic Wallpapers
-- [X] Set Different Scaling Modes
-- [X] Set Wallpaper Filter Algorithm
-- [X] Most common image formats supported (PNG, JPG, TIF,...)
-
-> Under the hood we use [image](https://crates.io/crates/image) which provides the most common image types, have a look on their documentation
-
-## Options
-
-| flag | purpose/variants                                                               |
-|:-----|:-------------------------------------------------------------------------------|
-| `-f` | Filter Methods (Fast, Good, Best, Nearest, Bilinear, Gaussian) [default: Good] |
-| `-m` | Display Mode (Dynamic, Static) [default: Autodetect]                           |
-| `-s` | Scale (Fill, Fit, None) [default: Fill]                                        |
-
-## Related Projects
-
-- [swaybg](https://github.com/swaywm/swaybg)
-- [mpvpaper](https://github.com/GhostNaN/mpvpaper)
-- [oguri](https://github.com/vilhalmer/oguri)
-- [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
 
 ## Known Limitations / TODOs
 
