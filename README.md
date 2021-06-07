@@ -1,4 +1,5 @@
 # enkei
+<a href="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/"><img src="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/status_image/last_build.png" /></a>
 
 A wayland wallpaper tool with support for Gnome dynamic wallpapers. The main motivation behind `enkei`
 the option to display dynamic wallpapers compatible with the
