@@ -92,14 +92,6 @@ $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
 
 ## Known Limitations / TODOs
 
-- [ ] Handle Output Changes
-
-    > It would be a nice to have to handle addition and removal of monitors
-    > while running.  Changes required would be to connect to the gdk
-    > DisplayManager and interact with these proclaimed changes. The delay in
-    > which this should happen is best to be kept low, so long-time animations
-    > will have to interrupted.
-
 - [ ] More efficient image rendering for animation steps
 
     > We create new cairo surface for separate animation steps, this leads to
