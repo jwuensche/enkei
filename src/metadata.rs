@@ -11,8 +11,7 @@ pub struct MetadataReader {}
 impl MetadataReader {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Metadata> {
         let config_file = OpenOptions::new().read(true).open(path)?;
-        let config: Background =
-            serde_xml_rs::from_reader(config_file)?;
+        let config: Background = serde_xml_rs::from_reader(config_file)?;
         // Sanity Checks and Transition
         let mut transitions = vec![];
         let start_time = {
@@ -197,15 +196,13 @@ impl Metadata {
             .find(|elem| elem.time_range().contains(&diff))
             .ok_or("Error in search")?;
 
-        Ok(
-            if diff - cur.time_range().start < cur.duration_static() {
-                State::Static(diff - cur.time_range().start, cur.clone())
-            } else {
-                State::Transition(
-                    diff - cur.time_range().start - cur.duration_static(),
-                    cur.clone(),
-                )
-            },
-        )
+        Ok(if diff - cur.time_range().start < cur.duration_static() {
+            State::Static(diff - cur.time_range().start, cur.clone())
+        } else {
+            State::Transition(
+                diff - cur.time_range().start - cur.duration_static(),
+                cur.clone(),
+            )
+        })
     }
 }

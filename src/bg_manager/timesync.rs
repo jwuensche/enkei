@@ -11,32 +11,36 @@ enum Response {
     Finished,
 }
 
+use std::{rc::Rc, sync::Mutex};
+
 use super::{BackgroundManager, OutputState};
 use crate::metadata;
 use gtk::prelude::*;
 use log::debug;
 use metadata::Transition;
 
-const SIXTYFPS: f32= 1000.0/60.0;
+const SIXTYFPS: f32 = 1000.0 / 60.0;
 
 pub fn calc_interval(transition_duration: f64) -> u32 {
     if transition_duration <= 5.0 {
         SIXTYFPS as u32
     } else {
-        ((transition_duration * 1000 as f64) / 60.0).clamp(1.0, 60000.0) as u32
+        ((transition_duration * 1000_f64) / 60.0).clamp(1.0, 60000.0) as u32
     }
 }
 
 pub fn calc_seconds_to_milli(dur: f64) -> u32 {
-    (dur * 1000 as f64) as u32
+    (dur * 1000_f64) as u32
 }
 
-pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Continue {
+pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib::Continue {
     match op {
         TransitionState::Animation(length) => {
             let start = std::time::Instant::now();
-            if let Response::Finished = animation_tick(&mut bm.monitors) {
+            let mut lock = bm.lock().unwrap();
+            if let Response::Finished = animation_tick(&mut lock.monitors) {
                 debug!("Animation Finished");
+                drop(lock);
                 main_tick(bm, TransitionState::Change);
                 return glib::Continue(false);
             }
@@ -47,6 +51,7 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                     "System too slow, increasing frame time by factor {}",
                     factor
                 );
+                drop(lock);
                 glib::timeout_add_local(length * factor as u32, move || {
                     main_tick(
                         bm.clone(),
@@ -60,10 +65,12 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
         }
         TransitionState::AnimationStart(slide) => {
             debug!("{}", "ANIMATION START");
-            for output in bm.monitors.iter_mut() {
+            let mut lock = bm.lock().unwrap();
+            for output in lock.monitors.iter_mut() {
                 output.time = std::time::Instant::now();
             }
 
+            drop(lock);
             if slide.is_animated() {
                 glib::timeout_add_local(calc_interval(slide.duration_transition()), move || {
                     main_tick(
@@ -81,7 +88,8 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
             let slide;
             let progress;
             debug!("{}", "SLIDE");
-            match bm.config.current() {
+            let mut lock = bm.lock().unwrap();
+            match lock.config.current() {
                 Ok(metadata::State::Static(p, tr)) => {
                     progress = p;
                     slide = tr;
@@ -92,12 +100,12 @@ pub fn main_tick(mut bm: BackgroundManager, op: TransitionState) -> glib::Contin
                 }
                 Err(e) => {
                     eprintln!("Failed to fetch current transition state, likely a problem with implementation details or current slide show. Continuing to avoid crash...
-    Details: {}", e);
+Details: {}", e);
                     return glib::Continue(true);
                 }
             }
 
-            if let Err(e) = bm.init_and_load() {
+            if let Err(e) = lock.init_and_load() {
                 eprintln!(
                     "Failed due to erroneous loading process. Continuing to avoid crash...
 Details: {}",
@@ -106,12 +114,15 @@ Details: {}",
                 return glib::Continue(true);
             }
 
+            drop(lock);
+
             if progress < slide.duration_static() {
                 // Animation not yet started
                 // Wrapper for animation
-                glib::timeout_add_local(calc_seconds_to_milli(slide.duration_static()), move || {
-                    main_tick(bm.clone(), TransitionState::AnimationStart(slide.clone()))
-                });
+                glib::timeout_add_local(
+                    calc_seconds_to_milli(slide.duration_static()),
+                    move || main_tick(bm.clone(), TransitionState::AnimationStart(slide.clone())),
+                );
             } else {
                 // Animation has started let's hurry up!
                 debug!("{}", "ANIMATION_RUSH");

@@ -3,8 +3,8 @@ extern crate gtk_layer_shell as gls;
 use cairo::ImageSurface;
 use clap::{arg_enum, value_t, App, Arg};
 use gdk::Rectangle;
-use metadata::{Metadata, MetadataReader};
 use lazy_regex::regex_is_match;
+use metadata::{Metadata, MetadataReader};
 
 mod bg_manager;
 mod metadata;
@@ -265,7 +265,10 @@ fn detect_wp_type(image: &str) -> Option<Mode> {
     if image.ends_with(".xml") {
         return Some(Mode::Dynamic);
     }
-    if regex_is_match!(r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$", image) {
+    if regex_is_match!(
+        r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
+        image
+    ) {
         return Some(Mode::Static);
     }
     None
