@@ -1,6 +1,6 @@
 [package]
 name = "enkei"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Johannes Wünsche <johannes@spacesnek.rocks>"]
 description = "A wayland wallpaper tool with support for GNOME dynamic wallpapers"
 homepage = "https://git.spacesnek.rocks/johannes/enkei"
