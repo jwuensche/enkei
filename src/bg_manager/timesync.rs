@@ -1,6 +1,6 @@
 // This file contains the main time based loops of enkei
 pub enum TransitionState {
-    Animation(u32),
+    Animation(u64),
     AnimationStart(Transition),
     Change,
     Start,
@@ -21,19 +21,20 @@ use metadata::Transition;
 
 const SIXTYFPS: f32 = 1000.0 / 60.0;
 
-pub fn calc_interval(transition_duration: f64) -> u32 {
+pub fn calc_interval(transition_duration: f64) -> u64 {
     if transition_duration <= 5.0 {
-        SIXTYFPS as u32
+        SIXTYFPS as u64
     } else {
-        ((transition_duration * 1000_f64) / 60.0).clamp(1.0, 60000.0) as u32
+        ((transition_duration * 1000_f64) / 60.0).clamp(1.0, 60000.0) as u64
     }
 }
 
-pub fn calc_seconds_to_milli(dur: f64) -> u32 {
-    (dur * 1000_f64) as u32
+pub fn calc_seconds_to_milli(dur: f64) -> u64 {
+    (dur * 1000_f64) as u64
 }
 
 pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib::Continue {
+    debug!("MAIN TICK");
     match op {
         TransitionState::Animation(length) => {
             let start = std::time::Instant::now();
@@ -46,16 +47,16 @@ pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib:
             }
             let elapsed = start.elapsed().as_millis();
             if elapsed > length as u128 {
-                let factor = (elapsed / length as u128) + 1;
+                let factor = ((elapsed / length as u128) + 1) as u64;
                 debug!(
                     "System too slow, increasing frame time by factor {}",
                     factor
                 );
                 drop(lock);
-                glib::timeout_add_local(length * factor as u32, move || {
+                glib::timeout_add_local(std::time::Duration::from_millis(length * factor), move || {
                     main_tick(
                         bm.clone(),
-                        TransitionState::Animation(length * factor as u32),
+                        TransitionState::Animation(length * factor),
                     )
                 });
                 return glib::Continue(false);
@@ -64,7 +65,7 @@ pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib:
             glib::Continue(true)
         }
         TransitionState::AnimationStart(slide) => {
-            debug!("{}", "ANIMATION START");
+            debug!("ANIMATION START");
             let mut lock = bm.lock().unwrap();
             for output in lock.monitors.iter_mut() {
                 output.time = std::time::Instant::now();
@@ -72,7 +73,7 @@ pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib:
 
             drop(lock);
             if slide.is_animated() {
-                glib::timeout_add_local(calc_interval(slide.duration_transition()), move || {
+                glib::timeout_add_local(std::time::Duration::from_millis(calc_interval(slide.duration_transition())), move || {
                     main_tick(
                         bm.clone(),
                         TransitionState::Animation(calc_interval(slide.duration_transition())),
@@ -87,7 +88,7 @@ pub fn main_tick(bm: Rc<Mutex<BackgroundManager>>, op: TransitionState) -> glib:
             // Load new Image and send loop to create next transition
             let slide;
             let progress;
-            debug!("{}", "SLIDE");
+            debug!("SLIDE");
             let mut lock = bm.lock().unwrap();
             match lock.config.current() {
                 Ok(metadata::State::Static(p, tr)) => {
@@ -120,13 +121,13 @@ Details: {}",
                 // Animation not yet started
                 // Wrapper for animation
                 glib::timeout_add_local(
-                    calc_seconds_to_milli(slide.duration_static()),
+                    std::time::Duration::from_millis(calc_seconds_to_milli(slide.duration_static())),
                     move || main_tick(bm.clone(), TransitionState::AnimationStart(slide.clone())),
                 );
             } else {
                 // Animation has started let's hurry up!
-                debug!("{}", "ANIMATION_RUSH");
-                glib::timeout_add_local(calc_interval(slide.duration_transition()), move || {
+                debug!("ANIMATION_RUSH");
+                glib::timeout_add_local(std::time::Duration::from_millis(calc_interval(slide.duration_transition())), move || {
                     main_tick(
                         bm.clone(),
                         TransitionState::Animation(calc_interval(slide.duration_transition())),
@@ -140,7 +141,7 @@ Details: {}",
 }
 
 fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
-    debug!("{}", "ANIMATION");
+    debug!("ANIMATION");
     for output in outputs.iter_mut() {
         if let Some(image_to) = &output.image_to {
             let per = (output.time.elapsed().as_millis() as f64
@@ -150,15 +151,16 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
                 // The composite pixbuf is inefficient let's try cairo
                 // let ctx = cairo::Context::new(&output.image_from);
                 debug!("{}", per);
-                let geometry = output.monitor.get_geometry();
+                let geometry = output.monitor.geometry();
                 let target =
                     cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                         .expect("Cannot create animaion with output geometry as defined in ticks. This is an untreatable error. Please Report.");
-                let ctx = cairo::Context::new(&target);
-                ctx.set_source_surface(&output.image_from, 0.0, 0.0);
-                ctx.paint();
-                ctx.set_source_surface(&image_to, 0.0, 0.0);
-                ctx.paint_with_alpha(ezing::quad_inout(per));
+                if let Ok(ctx) = cairo::Context::new(&target) {
+                    ctx.set_source_surface(&output.image_from, 0.0, 0.0);
+                    ctx.paint();
+                    ctx.set_source_surface(&image_to, 0.0, 0.0);
+                    ctx.paint_with_alpha(ezing::quad_inout(per));
+                }
 
                 output.pic.set_from_surface(Some(&target));
             } else {

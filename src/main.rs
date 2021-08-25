@@ -26,14 +26,14 @@ impl Scaling {
     }
 
     fn none(buf: &ImageSurface, geometry: &Rectangle) -> Result<ImageSurface, String> {
-        let pad_width = (geometry.width - buf.get_width()) as f64 / 2.0;
-        let pad_height = (geometry.height - buf.get_height()) as f64 / 2.0;
+        let pad_width = (geometry.width - buf.width()) as f64 / 2.0;
+        let pad_height = (geometry.height - buf.height()) as f64 / 2.0;
 
         {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                     .map_err(|e| format!("Surface creation failed: {}", e))?;
-            let ctx = cairo::Context::new(&target);
+            let ctx = cairo::Context::new(&target).map_err(|e| format!("Could not create surface: {:?}", e))?;
             ctx.set_source_surface(buf, pad_width, pad_height);
             ctx.paint();
 
@@ -66,17 +66,17 @@ impl Scaling {
         // 1. Crop the image if necessary
         // 2. Scale the image to the proper size
 
-        let height_ratio = geometry.height as f64 / buf.get_height() as f64;
-        let width_ratio = geometry.width as f64 / buf.get_width() as f64;
+        let height_ratio = geometry.height as f64 / buf.height() as f64;
+        let width_ratio = geometry.width as f64 / buf.width() as f64;
         let max_ratio = comp(height_ratio, width_ratio);
 
         // Get cropping edges (aspect)
-        let crop_height = ((buf.get_height() as f64 * max_ratio) as i32)
+        let crop_height = ((buf.height() as f64 * max_ratio) as i32)
             .checked_sub(geometry.height)
             .map(|elem| (elem / 2) as f64 / max_ratio)
             .unwrap_or(0.0)
             .clamp(-geometry.height as f64, geometry.height as f64);
-        let crop_width = ((buf.get_width() as f64 * max_ratio) as i32)
+        let crop_width = ((buf.width() as f64 * max_ratio) as i32)
             .checked_sub(geometry.width)
             .map(|elem| (elem / 2) as f64 / max_ratio)
             .unwrap_or(0.0)
@@ -86,10 +86,10 @@ impl Scaling {
             let target =
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                     .map_err(|e| format!("Encountered error while creating Surface: {}", e))?;
-            let ctx = cairo::Context::new(&target);
+            let ctx = cairo::Context::new(&target).map_err(|e| format!("Could not create surface: {:?}", e))?;
             ctx.scale(max_ratio, max_ratio);
             ctx.set_source_surface(buf, -crop_width, -crop_height);
-            ctx.get_source().set_filter(filter.into());
+            ctx.source().set_filter(filter.into());
             ctx.paint();
 
             Ok(target)
@@ -158,6 +158,7 @@ const SCALE_HELP: &str = "The scaling mode, which should be used to fit the imag
 const FILTER_HELP: &str = "The filter method which should be applied when a wallpaper is scaled. Variants correspond to cairo filters.";
 
 fn main() {
+    env_logger::init();
     let matches = App::new(NAME)
         .about(DESC)
         .version(VERSION)
@@ -203,7 +204,6 @@ fn main() {
                 .case_insensitive(true),
         )
         .get_matches();
-
     let image = matches.value_of(FILE).expect("No FILE given");
 
     let scaling: Scaling = value_t!(matches, SCALE, Scaling)

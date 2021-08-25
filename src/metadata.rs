@@ -90,7 +90,7 @@ impl MetadataReader {
             start_time: Local::now().naive_local(),
             total_duration_sec: f64::MAX,
             image_transisitons: vec![Transition::WithoutAnimation {
-                duration: f64::MAX,
+                duration: f64::MAX / 1_000_000_000f64,
                 time_range: 0f64..f64::MAX,
                 from: path.to_string(),
             }],

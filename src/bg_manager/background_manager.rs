@@ -21,7 +21,7 @@ use image::io::Reader as ImageReader;
 use image::DynamicImage;
 use log::debug;
 
-const WAITING_INTERVAL: u32 = 16;
+const WAITING_INTERVAL: u64 = 16;
 
 // Managment structure holding all the windows rendering the
 // separate windows. For each display on window is created
@@ -52,9 +52,9 @@ impl BackgroundManager {
         gtk::init().map_err(|e| format!("Failed to initialize gtk: {}", e))?;
 
         let display =
-            Display::get_default().ok_or_else(|| "Could not get default display.".to_string())?;
-        for mon_id in 0..display.get_n_monitors() {
-            if let Some(monitor) = display.get_monitor(mon_id) {
+            Display::default().ok_or_else(|| "Could not get default display.".to_string())?;
+        for mon_id in 0..display.n_monitors() {
+            if let Some(monitor) = display.monitor(mon_id) {
                 let img = ImageSurface::create(cairo::Format::ARgb32, 1, 1)
                     .map_err(|e| format!("Surface creation failed: {}", e))?;
                 monitors.push(OutputState {
@@ -70,7 +70,7 @@ impl BackgroundManager {
 
         let flags: ApplicationFlags = Default::default();
         let app =
-            gtk::Application::new(Some(IDENT), flags).map_err(|_| "Initialization failed...")?;
+            gtk::Application::new(Some(IDENT), flags);
 
         let mut bm = Self {
             monitors,
@@ -152,18 +152,18 @@ impl BackgroundManager {
         progress: f64,
     ) -> Result<(), String> {
         output.duration_in_sec = transition.duration_transition() as u64;
-        output.image_from = scaling.scale(&first, &output.monitor.get_geometry(), *filter)?;
+        output.image_from = scaling.scale(&first, &output.monitor.geometry(), *filter)?;
         if let Some(image_to) = &second {
             output.image_to =
-                Some(scaling.scale(&image_to, &output.monitor.get_geometry(), *filter)?);
+                Some(scaling.scale(&image_to, &output.monitor.geometry(), *filter)?);
         } else {
             output.image_to = None;
         }
-        let geometry = output.monitor.get_geometry();
+        let geometry = output.monitor.geometry();
         let sur =
             cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                 .map_err(|e| format!("Surface creation failed: {}", e))?;
-        let ctx = Context::new(&sur);
+        let ctx = Context::new(&sur).map_err(|e| format!("Could not create surface: {:?}", e))?;
         ctx.set_source_surface(&output.image_from, 0.0, 0.0);
         ctx.paint();
         if let Some(image_to) = &output.image_to {
@@ -258,7 +258,7 @@ impl BackgroundManager {
             });
         }
 
-        self.app.run(&[NAME.to_string()]);
+        self.app.run_with_args(&[NAME.to_string()]);
     }
 }
 
