@@ -156,10 +156,10 @@ fn animation_tick(outputs: &mut Vec<OutputState>) -> Response {
                     cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                         .expect("Cannot create animaion with output geometry as defined in ticks. This is an untreatable error. Please Report.");
                 if let Ok(ctx) = cairo::Context::new(&target) {
-                    ctx.set_source_surface(&output.image_from, 0.0, 0.0);
-                    ctx.paint();
-                    ctx.set_source_surface(&image_to, 0.0, 0.0);
-                    ctx.paint_with_alpha(ezing::quad_inout(per));
+                    ctx.set_source_surface(&output.image_from, 0.0, 0.0).map_err(|e| format!("Could not set source surface: {:?}", e)).unwrap();
+                    ctx.paint().map_err(|e| format!("Could not paint context: {:?}", e)).unwrap();
+                    ctx.set_source_surface(&image_to, 0.0, 0.0).map_err(|e| format!("Could not set source surface: {:?}", e)).unwrap();
+                    ctx.paint_with_alpha(ezing::quad_inout(per)).map_err(|e| format!("Could not paint context: {:?}", e)).unwrap();
                 }
 
                 output.pic.set_from_surface(Some(&target));

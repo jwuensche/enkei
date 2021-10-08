@@ -164,11 +164,11 @@ impl BackgroundManager {
             cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                 .map_err(|e| format!("Surface creation failed: {}", e))?;
         let ctx = Context::new(&sur).map_err(|e| format!("Could not create surface: {:?}", e))?;
-        ctx.set_source_surface(&output.image_from, 0.0, 0.0);
-        ctx.paint();
+        ctx.set_source_surface(&output.image_from, 0.0, 0.0).map_err(|e| format!("Could not set source surface: {:?}", e))?;
+        ctx.paint().map_err(|e| format!("Could not paint context: {:?}", e))?;
         if let Some(image_to) = &output.image_to {
-            ctx.set_source_surface(&image_to, 0.0, 0.0);
-            ctx.paint_with_alpha(progress as f64 / transition.duration_transition() as f64);
+            ctx.set_source_surface(&image_to, 0.0, 0.0).map_err(|e| format!("Could not set source surface: {:?}", e))?;
+            ctx.paint_with_alpha(progress as f64 / transition.duration_transition() as f64).map_err(|e| format!("Could not paint context: {:?}", e))?;
         }
         output.time = std::time::Instant::now() - std::time::Duration::from_secs(progress as u64);
         output.pic.set_from_surface(Some(&sur));
@@ -204,7 +204,7 @@ impl BackgroundManager {
         let origin = Rc::new(Mutex::new(self.clone()));
         main_tick(origin.clone(), TransitionState::Start);
 
-        if let Some(display) = Display::get_default() {
+        if let Some(display) = Display::default() {
             let remover = origin.clone();
             display.connect_monitor_removed(move |_, mon| {
                 debug!("Monitor Removed!");
@@ -216,8 +216,8 @@ impl BackgroundManager {
                 debug!("New Monitor detected {:?}.", mon);
                 let mo = mon.clone();
                 let adder = adder.clone();
-                timeout_add_local(WAITING_INTERVAL, move || {
-                    if mo.get_geometry().height < 1 || mo.get_geometry().width < 1 {
+                timeout_add_local(std::time::Duration::from_millis(WAITING_INTERVAL), move || {
+                    if mo.geometry().height < 1 || mo.geometry().width < 1 {
                         return glib::Continue(true)
                     }
                     let mut lock = adder.lock().unwrap();

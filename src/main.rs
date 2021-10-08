@@ -34,8 +34,8 @@ impl Scaling {
                 cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width, geometry.height)
                     .map_err(|e| format!("Surface creation failed: {}", e))?;
             let ctx = cairo::Context::new(&target).map_err(|e| format!("Could not create surface: {:?}", e))?;
-            ctx.set_source_surface(buf, pad_width, pad_height);
-            ctx.paint();
+            ctx.set_source_surface(buf, pad_width, pad_height).map_err(|e| format!("Could not set source surface: {:?}", e))?;
+            ctx.paint().map_err(|e| format!("Could not paint context: {:?}", e))?;
 
             Ok(target)
         }
@@ -88,9 +88,9 @@ impl Scaling {
                     .map_err(|e| format!("Encountered error while creating Surface: {}", e))?;
             let ctx = cairo::Context::new(&target).map_err(|e| format!("Could not create surface: {:?}", e))?;
             ctx.scale(max_ratio, max_ratio);
-            ctx.set_source_surface(buf, -crop_width, -crop_height);
+            ctx.set_source_surface(buf, -crop_width, -crop_height).map_err(|e| format!("Could not set source surface: {:?}", e))?;
             ctx.source().set_filter(filter.into());
-            ctx.paint();
+            ctx.paint().map_err(|e| format!("Could not paint context: {:?}", e))?;
 
             Ok(target)
         }
