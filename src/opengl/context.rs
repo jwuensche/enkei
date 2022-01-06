@@ -171,7 +171,6 @@ impl Context {
         unsafe {
             let name = std::ffi::CStr::from_bytes_with_nul_unchecked(b"ratio\0");
             let ratio_location = gl::GetUniformLocation(self.shader_program.id, name.as_ptr());
-            dbg!(ratio_location);
             gl::Uniform1f(ratio_location, ratio);
             gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);

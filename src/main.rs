@@ -26,6 +26,7 @@ mod outputs;
 mod output;
 mod schema;
 mod opengl;
+mod metadata;
 
 use thiserror::Error;
 
