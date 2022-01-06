@@ -4,7 +4,7 @@ use getset::Getters;
 use serde::__private::de::FlatInternallyTaggedAccess;
 use thiserror::Error;
 
-use wayland_client::protocol::wl_output::{Subpixel, Transform, Mode as ModeFlag};
+use wayland_client::protocol::wl_output::{Subpixel, Transform, Mode as ModeFlag, WlOutput};
 use wayland_client::protocol::{
     wl_output,
 };
@@ -20,6 +20,7 @@ pub struct Output {
     geometry: Option<Geometry>,
     mode: Option<Mode>,
     scale: i32,
+    inner: Main<wl_output::WlOutput>,
 }
 
 #[derive(Getters)]
@@ -56,11 +57,12 @@ pub struct Geometry {
 }
 
 impl Output {
-    fn new() -> Self {
+    fn new(inner: Main<wl_output::WlOutput>) -> Self {
         Self {
             geometry: None,
             mode: None,
             scale: 1,
+            inner,
         }
     }
 
@@ -74,6 +76,10 @@ impl Output {
 
     pub fn scale(&self) -> i32 {
         self.scale
+    }
+
+    pub fn inner(&self) -> &WlOutput {
+        &self.inner
     }
 }
 
@@ -123,7 +129,7 @@ impl OutputManager {
         let lock = output_handles.read().unwrap();
         let (tx, rx) = channel();
         for output in lock.iter() {
-            let new_output = Arc::new(RwLock::new(Output::new()));
+            let new_output = Arc::new(RwLock::new(Output::new(output.clone())));
             let pass = Arc::clone(&new_output);
             let deleted = tx.clone();
             output.quick_assign(move |_, event, _| {

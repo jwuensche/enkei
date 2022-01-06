@@ -82,14 +82,6 @@ fn main() -> Result<(), ApplicationError> {
     let mut buf_x: u32 = image.width();
     let mut buf_y: u32 = image.height();
 
-    for output in output_manager.outputs().iter() {
-        let lock = output.read().unwrap();
-        if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
-            println!("Found output {} {}:", geo.make(), geo.model());
-            println!("  Resolution: {}x{}", mode.width(), mode.height());
-            println!("  Position: {}x{}", geo.x(), geo.y());
-        }
-    }
 
     /*
      * Init wayland objects
@@ -99,30 +91,9 @@ fn main() -> Result<(), ApplicationError> {
     let compositor = globals
         .instantiate_exact::<wl_compositor::WlCompositor>(4)
         .unwrap();
-    let surface = compositor.create_surface();
-    surface.commit();
 
     // First define the layer shell interface and configure it before continuing
     let layers = globals.instantiate_exact::<ZwlrLayerShellV1>(2).unwrap();
-    let background =
-        layers.get_layer_surface(&surface, None, Layer::Background, "wallpaper".into());
-    background.set_layer(Layer::Background);
-    background.set_anchor(Anchor::all());
-    surface.commit();
-    background.quick_assign(|layer, event, _| match event {
-        LayerEvent::Configure {
-            serial,
-            width,
-            height,
-        } => {
-            layer.ack_configure(serial);
-        }
-        _ => {}
-    });
-    surface.commit();
-    event_queue
-        .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
-        .unwrap();
 
     // Create the egl surfaces here and setup the whole party, this should be taken into it's own module but for testing reasons
     // it can still be found here.
@@ -131,27 +102,18 @@ fn main() -> Result<(), ApplicationError> {
     gl::load_with(|name| egl.get_proc_address(name).unwrap() as *const std::ffi::c_void);
     let egl_display = setup_egl(&display);
     let (egl_context, egl_config) = create_context(egl_display);
-    let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, buf_x as i32, buf_y as i32);
-    let egl_surface = unsafe { egl.create_window_surface(egl_display, egl_config, wl_egl_surface.ptr() as egl::NativeWindowType, None).unwrap() };
-    egl.make_current(egl_display, Some(egl_surface), Some(egl_surface), Some(egl_context)).unwrap();
-    surface.commit();
-    // Rendering with the `gl` bindings are all unsafe let's block this away
-    let context = opengl::context::Context::new(&mut image.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
-    context.set_to(&mut image2.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
-    // Make the buffer the current one
-    egl.swap_buffers(egl_display, egl_surface).unwrap();
-    surface.commit();
 
-    let input = compositor.create_region();
-    surface.set_input_region(Some(&input));
-    surface.commit();
-
-    event_queue
-        .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
-        .unwrap();
-
-    surface.damage(0, 0, i32::max_value(), i32::max_value());
-    surface.commit();
+    for output in output_manager.outputs().iter() {
+        let lock = output.read().unwrap();
+        if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
+            println!("Found output {} {}:", geo.make(), geo.model());
+            println!("  Resolution: {}x{}", mode.width(), mode.height());
+            println!("  Position: {}x{}", geo.x(), geo.y());
+        }
+        drop(lock);
+        println!("Starting window on monitor..");
+        OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2);
+    }
 
     // Process all pending requests
     let mut process = 0.0;
@@ -162,22 +124,22 @@ fn main() -> Result<(), ApplicationError> {
                 dbg!(event);
             })
             .unwrap();
-        context.draw(process);
-        egl.swap_buffers(egl_display, egl_surface).unwrap();
-        surface.damage(0, 0, i32::max_value(), i32::max_value());
-        surface.commit();
-        if process >= 1.0 {
-            reverse = true;
-        }
-        if process <= 0.0 {
-            reverse = false;
-        }
-        if reverse {
-            process -= 0.016;
-        } else {
-            process += 0.016;
-        }
-        dbg!(process);
+        // context.draw(process);
+        // egl.swap_buffers(egl_display, egl_surface).unwrap();
+        // surface.damage(0, 0, i32::max_value(), i32::max_value());
+        // surface.commit();
+        // if process >= 1.0 {
+        //     reverse = true;
+        // }
+        // if process <= 0.0 {
+        //     reverse = false;
+        // }
+        // if reverse {
+        //     process -= 0.016;
+        // } else {
+        //     process += 0.016;
+        // }
+        // dbg!(process);
         std::thread::sleep(std::time::Duration::from_millis(16));
     }
 }
@@ -185,6 +147,8 @@ fn main() -> Result<(), ApplicationError> {
 use khronos_egl as egl;
 // global api object
 use egl::API as egl;
+
+use crate::output::OutputRendering;
 
 fn setup_egl(display: &Display) -> egl::Display {
         let egl_display = egl.get_display(display.get_display_ptr() as *mut std::ffi::c_void).unwrap();
