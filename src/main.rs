@@ -23,6 +23,7 @@ use wayland_client::{
 };
 
 mod outputs;
+mod output;
 mod schema;
 mod opengl;
 
@@ -75,37 +76,11 @@ fn main() -> Result<(), ApplicationError> {
 
 
     let image = image::open("/home/fred/Pictures/slice/bloke.jpg").unwrap();
+    let image2 = image::open("/home/fred/Pictures/slice/bloke2.jpg").unwrap();
 
     // buffer (and window) width and height
     let mut buf_x: u32 = image.width();
     let mut buf_y: u32 = image.height();
-
-    // create a tempfile to write the contents of the window on
-    // let mut tmp = tempfile::tempfile().expect("Unable to create a tempfile.");
-
-    let memfd_builder = memfd::MemfdOptions::new();
-    let mut tmp = memfd_builder
-        .create("wl-shm-buffer-chunk")
-        .unwrap()
-        .into_file();
-
-    // write the contents to it, lets put a nice color gradient
-    // {
-    //     let now = Instant::now();
-
-    //     let mut buf = BufWriter::new(&mut tmp);
-
-    //     for elem in image.as_rgb8().unwrap().as_raw().chunks(3) {
-    //         buf.write(&[elem[2], elem[1], elem[0], 0xFF]).unwrap();
-    //     }
-
-    //     buf.flush().unwrap();
-
-    //     println!(
-    //         "Time used to write image to mmap-ed file: {:?}",
-    //         Instant::now().duration_since(now)
-    //     );
-    // }
 
     for output in output_manager.outputs().iter() {
         let lock = output.read().unwrap();
@@ -119,7 +94,6 @@ fn main() -> Result<(), ApplicationError> {
     /*
      * Init wayland objects
      */
-
 
     // The compositor allows us to creates surfaces
     let compositor = globals
@@ -163,6 +137,7 @@ fn main() -> Result<(), ApplicationError> {
     surface.commit();
     // Rendering with the `gl` bindings are all unsafe let's block this away
     let context = opengl::context::Context::new(&mut image.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
+    context.set_to(&mut image2.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
     // Make the buffer the current one
     egl.swap_buffers(egl_display, egl_surface).unwrap();
     surface.commit();
@@ -175,50 +150,41 @@ fn main() -> Result<(), ApplicationError> {
         .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
         .unwrap();
 
-    // surface.attach(Some(&buffer), 0, 0);
     surface.damage(0, 0, i32::max_value(), i32::max_value());
     surface.commit();
 
     // Process all pending requests
+    let mut process = 0.0;
+    let mut reverse = false;
     loop {
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
                 dbg!(event);
             })
             .unwrap();
-        // std::thread::sleep(std::time::Duration::from_secs(1));
-        // {
-        //     let now = Instant::now();
-
-        //     tmp.rewind().unwrap();
-        //     let mut buf = BufWriter::new(&mut tmp);
-
-        //     if foo {
-        //         for elem in image.as_rgb8().unwrap().as_raw().chunks(3) {
-        //             buf.write(&[elem[2], elem[1], elem[0], 0xFF]).unwrap();
-        //         }
-        //     } else {
-        //         for elem in image2.as_rgb8().unwrap().as_raw().chunks(3) {
-        //             buf.write(&[elem[2], elem[1], elem[0], 0xFF]).unwrap();
-        //         }
-        //     }
-        //     foo = foo ^ true;
-        //     buf.flush().unwrap();
-
-        //     println!(
-        //         "Time used to write image to mmap-ed file: {:?}",
-        //         Instant::now().duration_since(now)
-        //     );
-        // }
-        // surface.attach(Some(&buffer), 0, 0);
-        // surface.damage(0, 0, i32::max_value(), i32::max_value());
-        // surface.commit();
+        context.draw(process);
+        egl.swap_buffers(egl_display, egl_surface).unwrap();
+        surface.damage(0, 0, i32::max_value(), i32::max_value());
+        surface.commit();
+        if process >= 1.0 {
+            reverse = true;
+        }
+        if process <= 0.0 {
+            reverse = false;
+        }
+        if reverse {
+            process -= 0.016;
+        } else {
+            process += 0.016;
+        }
+        dbg!(process);
+        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 }
 
 use khronos_egl as egl;
 // global api object
-use egl::{API as egl, GL_COLORSPACE_SRGB, GL_TEXTURE_2D, check_attrib_list};
+use egl::API as egl;
 
 fn setup_egl(display: &Display) -> egl::Display {
         let egl_display = egl.get_display(display.get_display_ptr() as *mut std::ffi::c_void).unwrap();

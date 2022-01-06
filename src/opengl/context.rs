@@ -141,14 +141,14 @@ impl Context {
         obj
     }
 
-    fn set_from(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_from(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.set_image(pic, width, height, self.tex_from)
         }
     }
 
-    fn set_to(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_to(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE1);
             self.set_image(pic, width, height, self.tex_to)
