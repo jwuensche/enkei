@@ -66,6 +66,7 @@ impl OutputRendering {
                 width,
                 height,
             } => {
+                // Ignore the resolution received while registering, we know on which output we are.
                 layer.ack_configure(serial);
             }
             _ => {}

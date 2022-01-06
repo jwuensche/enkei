@@ -1,24 +1,12 @@
-use egl::api::EGL1_5;
 use image::GenericImageView;
 use wayland_client::{Main, global_filter};
 
-use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
-    Layer, ZwlrLayerShellV1,
-};
-use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surface_v1::{
-    Anchor, Event as LayerEvent, ZwlrLayerSurfaceV1,
-};
+use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 
-use std::mem::{size_of, size_of_val};
 use std::sync::{Arc, RwLock};
-use std::{
-    io::{BufWriter, Seek, Write},
-    os::unix::io::AsRawFd,
-    time::Instant,
-};
 
 use wayland_client::{
-    protocol::{wl_compositor, wl_shm, wl_output},
+    protocol::{wl_compositor, wl_output},
     Display, GlobalManager,
 };
 
@@ -80,9 +68,8 @@ fn main() -> Result<(), ApplicationError> {
     let image2 = image::open("/home/fred/Pictures/slice/bloke2.jpg").unwrap();
 
     // buffer (and window) width and height
-    let mut buf_x: u32 = image.width();
-    let mut buf_y: u32 = image.height();
-
+    let buf_x: u32 = image.width();
+    let buf_y: u32 = image.height();
 
     /*
      * Init wayland objects

@@ -78,8 +78,8 @@ impl Context {
         let vertices: [f32; 16] = [
             // Positions    // TexCoords
             -1.0,  1.0,     0.0, 0.0,       // top-left
-            1.0,  1.0,     1.0, 0.0,       // top-right
-            1.0, -1.0,     1.0, 1.0,       // bottom-right
+             1.0,  1.0,     1.0, 0.0,       // top-right
+             1.0, -1.0,     1.0, 1.0,       // bottom-right
             -1.0, -1.0,     0.0, 1.0,       // bottom-left
         ];
 
