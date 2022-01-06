@@ -6,6 +6,7 @@ use khronos_egl::{
     Surface as eglSurface,
     Config as eglConfig,
 };
+use wayland_egl::WlEglSurface;
 
 use super::opengl::context::Context as glContext;
 
@@ -32,6 +33,7 @@ pub struct OutputRendering {
     surface: Main<WlSurface>,
     egl_context: eglContext,
     egl_display: eglDisplay,
+    wl_egl_surface: WlEglSurface,
     egl_surface: eglSurface,
     gl_context: glContext,
 }
@@ -100,11 +102,17 @@ impl OutputRendering {
             output,
             surface,
             egl_context,
+            wl_egl_surface,
             egl_display,
             egl_surface,
             gl_context: context,
         }
     }
+
+    pub fn draw(&self, process: f32) {
+        egl.make_current(self.egl_display, Some(self.egl_surface), Some(self.egl_surface), Some(self.egl_context)).unwrap();
+        self.gl_context.draw(process);
+        egl.swap_buffers(self.egl_display, self.egl_surface).unwrap();
+        self.surface.commit();
+    }
 }
-
-

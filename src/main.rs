@@ -103,6 +103,8 @@ fn main() -> Result<(), ApplicationError> {
     let egl_display = setup_egl(&display);
     let (egl_context, egl_config) = create_context(egl_display);
 
+    let mut renders = Vec::new();
+
     for output in output_manager.outputs().iter() {
         let lock = output.read().unwrap();
         if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
@@ -112,7 +114,7 @@ fn main() -> Result<(), ApplicationError> {
         }
         drop(lock);
         println!("Starting window on monitor..");
-        OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2);
+        renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2));
     }
 
     // Process all pending requests
@@ -128,17 +130,20 @@ fn main() -> Result<(), ApplicationError> {
         // egl.swap_buffers(egl_display, egl_surface).unwrap();
         // surface.damage(0, 0, i32::max_value(), i32::max_value());
         // surface.commit();
-        // if process >= 1.0 {
-        //     reverse = true;
-        // }
-        // if process <= 0.0 {
-        //     reverse = false;
-        // }
-        // if reverse {
-        //     process -= 0.016;
-        // } else {
-        //     process += 0.016;
-        // }
+        for foo in renders.iter() {
+            foo.draw(process);
+        }
+        if process >= 1.0 {
+            reverse = true;
+        }
+        if process <= 0.0 {
+            reverse = false;
+        }
+        if reverse {
+            process -= 0.016;
+        } else {
+            process += 0.016;
+        }
         // dbg!(process);
         std::thread::sleep(std::time::Duration::from_millis(16));
     }
