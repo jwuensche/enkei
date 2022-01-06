@@ -141,23 +141,23 @@ impl Context {
         obj
     }
 
-    pub fn set_from(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_from(&self, pic: &Vec<u8>, width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.set_image(pic, width, height, self.tex_from)
         }
     }
 
-    pub fn set_to(&self, pic: &mut Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_to(&self, pic: &Vec<u8>, width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE1);
             self.set_image(pic, width, height, self.tex_to)
         }
     }
 
-    unsafe fn set_image(&self, pic: &mut Vec<u8>, width: i32, height: i32, tex_id: u32) -> () {
+    unsafe fn set_image(&self, pic: &Vec<u8>, width: i32, height: i32, tex_id: u32) -> () {
             gl::BindTexture(gl::TEXTURE_2D, tex_id);
-            gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, width, height, 0, gl::RGB, gl::UNSIGNED_BYTE, pic.as_mut_ptr() as *mut gl::types::GLvoid);
+            gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, width, height, 0, gl::RGB, gl::UNSIGNED_BYTE, pic.as_ptr() as *const gl::types::GLvoid);
             check_error("image load");
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);

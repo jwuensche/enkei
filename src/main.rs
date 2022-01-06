@@ -3,7 +3,7 @@ use wayland_client::{Main, global_filter};
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, mpsc::channel};
 
 use wayland_client::{
     protocol::{wl_compositor, wl_output},
@@ -15,6 +15,8 @@ mod output;
 mod schema;
 mod opengl;
 mod metadata;
+mod messages;
+mod watchdog;
 
 use thiserror::Error;
 
@@ -39,6 +41,8 @@ fn main() -> Result<(), ApplicationError> {
 
     let wl_outputs = Arc::new(RwLock::new(Vec::new()));
     let pass_outputs = Arc::clone(&wl_outputs);
+
+    let (message_tx, message_rx) = channel();
     let globals = GlobalManager::new_with_cb(
         &attached_display,
         // Let's use the global filter macro provided with the wayland-client crate here
@@ -64,8 +68,13 @@ fn main() -> Result<(), ApplicationError> {
         .unwrap();
 
 
-    let image = image::open("/home/fred/Pictures/slice/bloke.jpg").unwrap();
-    let image2 = image::open("/home/fred/Pictures/slice/bloke2.jpg").unwrap();
+    /*
+     * Initialize Watchdogs for Suspension Cycles
+    */
+    watchdog::sleeping::initialize(message_tx.clone());
+
+    let image = image::open("/home/fred/Pictures/Taktop/cosette.png").unwrap();
+    let image2 = image::open("/home/fred/Pictures/konosuba/Collection/chomusuke.png").unwrap();
 
     // buffer (and window) width and height
     let buf_x: u32 = image.width();
@@ -146,7 +155,6 @@ use crate::output::OutputRendering;
 fn setup_egl(display: &Display) -> egl::Display {
         let egl_display = egl.get_display(display.get_display_ptr() as *mut std::ffi::c_void).unwrap();
         egl.initialize(egl_display).unwrap();
-
         egl_display
 }
 

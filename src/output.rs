@@ -81,8 +81,8 @@ impl OutputRendering {
         egl.make_current(egl_display, Some(egl_surface), Some(egl_surface), Some(egl_context)).unwrap();
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
-        let context = super::opengl::context::Context::new(&mut image.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
-        context.set_to(&mut image2.as_rgb8().unwrap().as_raw().clone(), buf_x as i32, buf_y as i32);
+        let context = super::opengl::context::Context::new(&mut image.to_rgb8().as_raw().clone(), buf_x as i32, buf_y as i32);
+        context.set_to(&mut image2.to_rgb8().as_raw().clone(), buf_x as i32, buf_y as i32);
         // Make the buffer the current one
         egl.swap_buffers(egl_display, egl_surface).unwrap();
         surface.commit();
@@ -108,6 +108,14 @@ impl OutputRendering {
             egl_surface,
             gl_context: context,
         }
+    }
+
+    pub fn set_to<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
+        self.gl_context.set_to(image, width.into(), height.into())
+    }
+
+    pub fn set_from<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
+        self.gl_context.set_from(image, width.into(), height.into())
     }
 
     pub fn draw(&self, process: f32) {
