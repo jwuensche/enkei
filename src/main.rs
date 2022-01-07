@@ -20,6 +20,11 @@ mod watchdog;
 
 use thiserror::Error;
 
+use outputs::{
+    Output,
+    handle_output_events,
+};
+
 #[derive(Error, Debug)]
 pub enum ApplicationError {
     #[error("Could not access the member `{0}` in some struct.")]
@@ -43,6 +48,7 @@ fn main() -> Result<(), ApplicationError> {
     let pass_outputs = Arc::clone(&wl_outputs);
 
     let (message_tx, message_rx) = channel();
+    let tx = message_tx.clone();
     let globals = GlobalManager::new_with_cb(
         &attached_display,
         // Let's use the global filter macro provided with the wayland-client crate here
@@ -51,8 +57,15 @@ fn main() -> Result<(), ApplicationError> {
         global_filter!(
             [wl_output::WlOutput, 2, move |output: Main<wl_output::WlOutput>, _: DispatchData| {
                 println!("Got a new WlOutput instance!");
+                let new_output = Arc::new(RwLock::new(Output::new(output.clone())));
+                let pass = Arc::clone(&new_output);
+                let added = tx.clone();
+                output.quick_assign(move |_, event, _| {
+                    handle_output_events(&pass, event, &added);
+                });
                 let mut lock = pass_outputs.write().unwrap();
-                lock.push(output);
+                lock.push(new_output);
+                drop(lock);
             }]
         )
     );
@@ -60,21 +73,13 @@ fn main() -> Result<(), ApplicationError> {
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
         .unwrap();
 
-    let output_manager = outputs::OutputManager::new(wl_outputs);
-    event_queue
-        .sync_roundtrip(&mut (), |event, _, _| {
-            dbg!(event);
-        })
-        .unwrap();
-
-
     /*
      * Initialize Watchdogs for Suspension Cycles
     */
     watchdog::sleeping::initialize(message_tx.clone());
 
     let image = image::open("/home/fred/Pictures/Taktop/cosette.png").unwrap();
-    let image2 = image::open("/home/fred/Pictures/konosuba/Collection/chomusuke.png").unwrap();
+    let image2 = image::open("/home/fred/Pictures/Taktop/more_cosette.png").unwrap();
 
     // buffer (and window) width and height
     let buf_x: u32 = image.width();
@@ -102,47 +107,47 @@ fn main() -> Result<(), ApplicationError> {
 
     let mut renders = Vec::new();
 
-    for output in output_manager.outputs().iter() {
-        let lock = output.read().unwrap();
-        if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
-            println!("Found output {} {}:", geo.make(), geo.model());
-            println!("  Resolution: {}x{}", mode.width(), mode.height());
-            println!("  Position: {}x{}", geo.x(), geo.y());
-        }
-        drop(lock);
-        println!("Starting window on monitor..");
-        renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2));
-    }
-
     // Process all pending requests
-    let mut process = 0.0;
-    let mut reverse = false;
+    watchdog::timer::initialize(std::time::Duration::from_millis(16), 60, message_tx.clone());
     loop {
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
                 dbg!(event);
             })
             .unwrap();
-        // context.draw(process);
-        // egl.swap_buffers(egl_display, egl_surface).unwrap();
-        // surface.damage(0, 0, i32::max_value(), i32::max_value());
-        // surface.commit();
-        for foo in renders.iter() {
-            foo.draw(process);
-        }
-        if process >= 1.0 {
-            reverse = true;
-        }
-        if process <= 0.0 {
-            reverse = false;
-        }
-        if reverse {
-            process -= 0.016;
+
+        if let Ok(msg) = message_rx.try_recv() {
+            // do something with new found messages
+            match msg {
+                messages::WorkerMessage::AddOutput(output) => {
+                    dbg!("AddOutput");
+                    let lock = output.read().unwrap();
+                    if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
+                        println!("Found output {} {}:", geo.make(), geo.model());
+                        println!("  Resolution: {}x{}", mode.width(), mode.height());
+                        println!("  Position: {}x{}", geo.x(), geo.y());
+                    }
+                    drop(lock);
+                    println!("Starting window on monitor..");
+                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2));
+                    dbg!(&renders);
+                },
+                messages::WorkerMessage::RemoveOutput(output) => {
+                    dbg!("RemoveOutput");
+                },
+                messages::WorkerMessage::AnimationStep(val) => {
+                    dbg!(val);
+                    for foo in renders.iter() {
+                        foo.draw(ezing::quad_inout(val));
+                    }
+                },
+                messages::WorkerMessage::Refresh => todo!(),
+            }
         } else {
-            process += 0.016;
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
-        // dbg!(process);
-        std::thread::sleep(std::time::Duration::from_millis(16));
+
+
     }
 }
 

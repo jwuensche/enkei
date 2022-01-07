@@ -2,6 +2,7 @@ use super::shader::Shader;
 use super::error::check_error;
 use log::debug;
 
+#[derive(Debug)]
 pub struct Context {
     vao: u32,
     vbo: u32,
@@ -11,6 +12,7 @@ pub struct Context {
     shader_program: Program,
 }
 
+#[derive(Debug)]
 pub struct Program {
     id: u32,
     vertex_shader: Shader,

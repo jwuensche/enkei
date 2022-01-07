@@ -5,6 +5,7 @@ use gl::types::{
 
 use super::error::check_error;
 
+#[derive(Debug)]
 pub struct Shader {
     id: u32,
     kind: GLenum,

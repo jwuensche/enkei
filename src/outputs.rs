@@ -1,5 +1,5 @@
 use std::sync::mpsc::{Receiver, channel, Sender};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 use getset::Getters;
 use serde::__private::de::FlatInternallyTaggedAccess;
 use thiserror::Error;
@@ -16,6 +16,10 @@ pub enum OutputError<'a> {
     KeyNotDefined(&'a str),
 }
 
+use crate::messages::WorkerMessage;
+use send_wrapper::SendWrapper;
+
+#[derive(Debug)]
 pub struct Output {
     geometry: Option<Geometry>,
     mode: Option<Mode>,
@@ -23,7 +27,7 @@ pub struct Output {
     inner: Main<wl_output::WlOutput>,
 }
 
-#[derive(Getters)]
+#[derive(Getters, Debug)]
 pub struct Mode {
     #[get = "pub"]
     flags: ModeFlag,
@@ -36,7 +40,7 @@ pub struct Mode {
     refresh: i32,
 }
 
-#[derive(Getters)]
+#[derive(Getters, Debug)]
 pub struct Geometry {
     #[get = "pub"]
     x: i32,
@@ -57,7 +61,7 @@ pub struct Geometry {
 }
 
 impl Output {
-    fn new(inner: Main<wl_output::WlOutput>) -> Self {
+    pub fn new(inner: Main<wl_output::WlOutput>) -> Self {
         Self {
             geometry: None,
             mode: None,
@@ -84,12 +88,10 @@ impl Output {
 }
 
 pub struct OutputManager {
-    outputs: Vec<Arc<RwLock<Output>>>,
-    inner: Arc<RwLock<Vec<Main<wl_output::WlOutput>>>>,
-    deleted: Receiver<Arc<RwLock<Output>>>,
+    inner: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>,
 }
 
-fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, deleted: &Sender<Arc<RwLock<Output>>>) {
+pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, added: &Sender<WorkerMessage>) {
     match event {
         wl_output::Event::Geometry { x, y, physical_width, physical_height, subpixel, make, model, transform } => {
             let mut lock = pass.write().expect("Could not lock output object");
@@ -117,36 +119,22 @@ fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, del
             let mut lock = pass.write().expect("Could not lock output object");
             lock.scale = factor;
         },
-        wl_output::Event::Done => deleted.send(Arc::clone(&pass)).unwrap(),
+        wl_output::Event::Done => added.send(
+            WorkerMessage::AddOutput(SendWrapper::new(Arc::clone(&pass)))
+        ).unwrap(),
         _ => unreachable!(),
     }
 }
 
 impl OutputManager {
-    /// It is advised to `sync_roundtrip` the attached event queue to push all events through and update all given outputs as soon as possible
-    pub fn new(output_handles: Arc<RwLock<Vec<Main<wl_output::WlOutput>>>>) -> Self {
-        let mut outputs = Vec::new();
-        let lock = output_handles.read().unwrap();
-        let (tx, rx) = channel();
-        for output in lock.iter() {
-            let new_output = Arc::new(RwLock::new(Output::new(output.clone())));
-            let pass = Arc::clone(&new_output);
-            let deleted = tx.clone();
-            output.quick_assign(move |_, event, _| {
-                handle_output_events(&pass, event, &deleted);
-            });
-            outputs.push(new_output);
-        }
-        drop(lock);
+    pub fn new(output_handles: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>) -> Self {
         let obj = Self {
-            outputs,
             inner: output_handles,
-            deleted: rx,
         };
         obj
     }
 
-    pub fn outputs(&self) -> &Vec<Arc<RwLock<Output>>> {
-        &self.outputs
+    pub fn outputs(&self) -> Option<RwLockReadGuard<Vec<Arc<RwLock<Output>>>>> {
+        self.inner.read().ok()
     }
 }

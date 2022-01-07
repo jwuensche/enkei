@@ -9,6 +9,6 @@ use send_wrapper::SendWrapper;
 pub enum WorkerMessage {
     AddOutput(SendWrapper<Arc<RwLock<Output>>>),
     RemoveOutput(SendWrapper<Arc<RwLock<Output>>>),
-    AnimationStep(Transition),
+    AnimationStep(f32),
     Refresh,
 }

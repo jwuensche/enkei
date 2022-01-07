@@ -28,6 +28,7 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
     Anchor, Event as LayerEvent, ZwlrLayerSurfaceV1,
 };
 
+#[derive(Debug)]
 pub struct OutputRendering {
     output: Arc<RwLock<Output>>,
     surface: Main<WlSurface>,
