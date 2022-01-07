@@ -93,6 +93,7 @@ pub fn work(
                 messages::WorkerMessage::Refresh => todo!(),
             }
         } else {
+            std::thread::sleep(std::time::Duration::from_secs(1));
         }
 
     }
