@@ -17,7 +17,7 @@ pub enum Filter {
     Gaussian,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub enum Scaling {
     Fill,
     Fit,
@@ -108,10 +108,6 @@ impl Scaling {
             drop(ctx);
 
             let data = target.take_data().map_err(|e| ImageError::CouldNotGetData(e))?.to_vec();
-            dbg!(data[0]);
-            dbg!(data[1]);
-            dbg!(data[2]);
-            dbg!(data[3]);
             Ok(data.chunks_exact(4).flat_map(|arr| [arr[2], arr[1], arr[0]]).collect())
         }
     }

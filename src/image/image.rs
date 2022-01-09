@@ -20,9 +20,6 @@ impl Image {
         let stride = cairo::Format::Rgb24
             .stride_for_width(width)
             .map_err(|_| ImageError::Generic(format!("The stride could not be determined for width {}", width)))?;
-        dbg!(stride as u32 * height);
-        dbg!(stride);
-        dbg!(image_data.len());
         let surface = ImageSurface::create_for_data(image_data, cairo::Format::Rgb24, width as i32, height as i32, stride)
             .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
         Ok(Self {

@@ -10,5 +10,6 @@ pub enum WorkerMessage {
     AddOutput(SendWrapper<Arc<RwLock<Output>>>),
     RemoveOutput(SendWrapper<Arc<RwLock<Output>>>),
     AnimationStep(f32),
+    AnimationStart(f64),
     Refresh,
 }

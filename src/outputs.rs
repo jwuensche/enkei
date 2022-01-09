@@ -27,7 +27,7 @@ pub struct Output {
     inner: Main<wl_output::WlOutput>,
 }
 
-#[derive(Getters, Debug)]
+#[derive(Getters, Debug, Clone)]
 pub struct Mode {
     #[get = "pub"]
     flags: ModeFlag,
@@ -40,7 +40,7 @@ pub struct Mode {
     refresh: i32,
 }
 
-#[derive(Getters, Debug)]
+#[derive(Getters, Debug, Clone)]
 pub struct Geometry {
     #[get = "pub"]
     x: i32,

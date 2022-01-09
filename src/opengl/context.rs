@@ -51,10 +51,8 @@ impl Program {
         debug!("Linking \"position\" argument");
         unsafe {
             let pos = std::ffi::CStr::from_bytes_with_nul_unchecked(b"position\0");
-            dbg!(pos);
             let pos_attrib = gl::GetAttribLocation(self.id, pos.as_ptr());
             check_error("pre call");
-            dbg!(pos_attrib);
             gl::EnableVertexAttribArray(pos_attrib as u32);
             check_error("Argument linking");
             gl::VertexAttribPointer(pos_attrib as u32, 2, gl::FLOAT, gl::FALSE, (4 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
@@ -120,14 +118,12 @@ impl Context {
             gl::GenTextures(1, &mut tex_from);
             let name = std::ffi::CStr::from_bytes_with_nul_unchecked(b"from\0");
             let from_location = gl::GetUniformLocation(program.id, name.as_ptr());
-            dbg!(from_location);
             gl::Uniform1i(from_location, 0);
 
             gl::ActiveTexture(gl::TEXTURE1);
             gl::GenTextures(1, &mut tex_to);
             let name = std::ffi::CStr::from_bytes_with_nul_unchecked(b"to\0");
             let to_location = gl::GetUniformLocation(program.id, name.as_ptr());
-            dbg!(to_location);
             gl::Uniform1i(to_location, 1);
         }
         let obj = Self {
