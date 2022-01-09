@@ -16,6 +16,7 @@ mod metadata;
 mod messages;
 mod watchdog;
 mod worker;
+mod image;
 
 use thiserror::Error;
 
