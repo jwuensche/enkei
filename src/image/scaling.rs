@@ -42,7 +42,7 @@ impl Scaling {
 
         {
             let target =
-                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width as i32, geometry.height as i32)
+                cairo::ImageSurface::create(cairo::Format::Rgb24, geometry.width as i32, geometry.height as i32)
                     .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
             let ctx = cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
             ctx.set_source_surface(buf, pad_width, pad_height).map_err(|e| ImageError::CouldNotSetSource(e))?;
@@ -95,7 +95,7 @@ impl Scaling {
         // Create context and scale and crop to fit
         {
             let target =
-                cairo::ImageSurface::create(cairo::Format::ARgb32, geometry.width as i32, geometry.height as i32)
+                cairo::ImageSurface::create(cairo::Format::Rgb24, geometry.width as i32, geometry.height as i32)
                     .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
             let ctx = cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
             ctx.scale(max_ratio, max_ratio);
