@@ -30,7 +30,7 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
 
 #[derive(Debug)]
 pub struct OutputRendering {
-    output: Arc<RwLock<Output>>,
+    pub output: Arc<RwLock<Output>>,
     surface: Main<WlSurface>,
     egl_context: eglContext,
     egl_display: eglDisplay,
@@ -50,8 +50,6 @@ impl OutputRendering {
         egl_config: eglConfig,
         buf_x: u32,
         buf_y: u32,
-        image: &DynamicImage,
-        image2: &DynamicImage,
     ) -> Self {
         let surface = compositor.create_surface();
         surface.commit();
@@ -78,12 +76,12 @@ impl OutputRendering {
             .unwrap();
 
         let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, buf_x as i32, buf_y as i32);
+        let (egl_context, egl_config) = create_context(egl_display);
         let egl_surface = unsafe { egl.create_window_surface(egl_display, egl_config, wl_egl_surface.ptr() as egl::NativeWindowType, None).unwrap() };
         egl.make_current(egl_display, Some(egl_surface), Some(egl_surface), Some(egl_context)).unwrap();
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
-        let context = super::opengl::context::Context::new(&mut image.to_rgb8().as_raw().clone(), buf_x as i32, buf_y as i32);
-        context.set_to(&mut image2.to_rgb8().as_raw().clone(), buf_x as i32, buf_y as i32);
+        let context = super::opengl::context::Context::new(buf_x as i32, buf_y as i32);
         // Make the buffer the current one
         egl.swap_buffers(egl_display, egl_surface).unwrap();
         surface.commit();
@@ -116,6 +114,7 @@ impl OutputRendering {
     }
 
     pub fn set_from<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
+        egl.make_current(self.egl_display, Some(self.egl_surface), Some(self.egl_surface), Some(self.egl_context)).unwrap();
         self.gl_context.set_from(image, width.into(), height.into())
     }
 

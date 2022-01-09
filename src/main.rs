@@ -1,3 +1,4 @@
+use metadata::MetadataError;
 use wayland_client::{Main, global_filter};
 
 
@@ -18,6 +19,8 @@ mod watchdog;
 mod worker;
 mod image;
 
+use crate::image::error::ImageError;
+
 use thiserror::Error;
 
 use khronos_egl as egl;
@@ -33,6 +36,10 @@ use outputs::{
 pub enum ApplicationError {
     #[error("Could not access the member `{0}` in some struct.")]
     AccessError(String),
+    #[error("Image Processing failed: `{0}`")]
+    ErrorWhileImageProcessing(ImageError),
+    #[error("Reading of metadata failed: `{0}`")]
+    MetadataError(MetadataError)
 }
 
 impl<'a> From<outputs::OutputError<'a>> for ApplicationError {
@@ -40,6 +47,18 @@ impl<'a> From<outputs::OutputError<'a>> for ApplicationError {
         match err {
             outputs::OutputError::KeyNotDefined(key) => Self::AccessError(key.into()),
         }
+    }
+}
+
+impl From<image::error::ImageError> for ApplicationError {
+    fn from(e: image::error::ImageError) -> Self {
+        ApplicationError::ErrorWhileImageProcessing(e)
+    }
+}
+
+impl From<MetadataError> for ApplicationError {
+    fn from(e: MetadataError) -> Self {
+        ApplicationError::MetadataError(e)
     }
 }
 
@@ -82,8 +101,6 @@ fn main() -> Result<(), ApplicationError> {
     */
     watchdog::sleeping::initialize(message_tx.clone());
 
-
-
-    worker::work(globals, display, message_rx, message_tx, event_queue)?;
+    worker::work(globals, display, message_rx, message_tx, event_queue, "/home/fred/Pictures/Taktop/Takt.xml")?;
     Ok(())
 }

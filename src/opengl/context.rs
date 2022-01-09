@@ -76,7 +76,7 @@ impl Program {
 }
 
 impl Context {
-    pub fn new(pic: &mut Vec<u8>, width: i32, height: i32) -> Self {
+    pub fn new(width: i32, height: i32) -> Self {
         let vertices: [f32; 16] = [
             // Positions    // TexCoords
             -1.0,  1.0,     0.0, 0.0,       // top-left
@@ -138,8 +138,6 @@ impl Context {
             tex_to,
             shader_program: program,
         };
-        obj.set_from(pic, width, height);
-        obj.draw(0.0);
         obj
     }
 

@@ -18,6 +18,8 @@ pub enum MetadataError {
     CouldNotOpen(String),
     #[error("Could not parse wallpaper description: `{0}`")]
     CouldNotParse(String),
+    #[error("Cannot determine current frame.")]
+    CurrentFrame,
 }
 
 impl MetadataReader {
@@ -190,7 +192,7 @@ pub enum State {
 }
 
 impl Metadata {
-    pub fn current(&self) -> Result<State, String> {
+    pub fn current(&self) -> Result<State, MetadataError> {
         let now = Local::now().naive_local();
 
         let diff = (now - self.start_time).num_seconds() as f64 % self.total_duration_sec;
@@ -198,7 +200,7 @@ impl Metadata {
             .image_transisitons
             .iter()
             .find(|elem| elem.time_range().contains(&diff))
-            .ok_or("Error in search")?;
+            .ok_or(MetadataError::CurrentFrame)?;
 
         Ok(if diff - cur.time_range().start < cur.duration_static() {
             State::Static(diff - cur.time_range().start, cur.clone())

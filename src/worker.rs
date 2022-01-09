@@ -1,8 +1,12 @@
+use std::io::Read;
 use std::sync::mpsc::{
     Sender, Receiver,
 };
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    RwLock,
+};
 
 use wayland_client::{
     GlobalManager,
@@ -16,7 +20,14 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_
 
 use image::GenericImageView;
 
+use crate::image::scaling::{
+    Scaling,
+    Filter,
+
+};
 use crate::messages::{self, WorkerMessage};
+use crate::metadata::{MetadataReader, Metadata, MetadataError};
+use crate::outputs::Output;
 use crate::watchdog;
 use crate::ApplicationError;
 
@@ -26,6 +37,7 @@ pub fn work(
     messages: Receiver<WorkerMessage>,
     senders: Sender<WorkerMessage>,
     mut event_queue: EventQueue,
+    path: &str,
 ) -> Result<(), ApplicationError> {
     /*
      * Init wayland objects
@@ -48,13 +60,7 @@ pub fn work(
 
     let mut renders = Vec::new();
 
-    let image = image::open("/home/fred/Pictures/Taktop/cosette.png").unwrap();
-    let image2 = image::open("/home/fred/Pictures/Taktop/more_cosette.png").unwrap();
-
-    // buffer (and window) width and height
-    let buf_x: u32 = image.width();
-    let buf_y: u32 = image.height();
-
+    let metadata = MetadataReader::read(path)?;
 
     // Process all pending requests
     watchdog::timer::initialize(std::time::Duration::from_millis(16), 60, senders.clone());
@@ -76,10 +82,13 @@ pub fn work(
                         println!("      Resolution: {}x{}", mode.width(), mode.height());
                         println!("      Position: {}x{}", geo.x(), geo.y());
                     }
+                    let width = *lock.mode().unwrap().width();
+                    let height = *lock.mode().unwrap().height();
                     drop(lock);
                     println!("Starting window on monitor..");
-                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, buf_x, buf_y, &image, &image2));
-                    dbg!(&renders);
+                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, width as u32, height as u32));
+                    refresh_output(renders.last_mut().unwrap(), &metadata, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                    renders.last_mut().unwrap().draw(0.0);
                 },
                 messages::WorkerMessage::RemoveOutput(output) => {
                     todo!()
@@ -90,7 +99,11 @@ pub fn work(
                         output.draw(ezing::quad_inout(process));
                     }
                 },
-                messages::WorkerMessage::Refresh => todo!(),
+                messages::WorkerMessage::Refresh => {
+                    for output in renders.iter_mut() {
+                        refresh_output(output, &metadata, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                    }
+                },
             }
         } else {
             std::thread::sleep(std::time::Duration::from_secs(1));
@@ -99,6 +112,31 @@ pub fn work(
     }
 }
 
+fn refresh_output(output: &mut OutputRendering, metadata: &Metadata, scaling: Scaling, filter: Filter) -> Result<(), MetadataError>{
+    match metadata.current()? {
+        crate::metadata::State::Static(progress, transition) => {
+            let lock = output.output.read().unwrap();
+            let mut from = crate::image::image::Image::new(transition.from(), scaling, filter).unwrap().process(lock.mode().unwrap()).expect("Could not get Image data");
+            let width = *lock.mode().unwrap().width();
+            let height = *lock.mode().unwrap().height();
+            drop(lock);
+            println!("Writing image of size {}x{}", width, height);
+            output.set_from(&mut from, width, height);
+            output.set_to(&mut from, width, height);
+        },
+        crate::metadata::State::Transition(progress, transition) => {
+            let lock = output.output.read().unwrap();
+            let mut from = crate::image::image::Image::new(transition.from(), scaling, filter).unwrap().process(lock.mode().unwrap()).unwrap();
+            let width = *lock.mode().unwrap().width();
+            let height = *lock.mode().unwrap().height();
+            drop(lock);
+            println!("Writing image of size {}x{}", width, height);
+            output.set_from(&mut from, width, height);
+            output.set_to(&mut from, width, height);
+        },
+    }
+    Ok(())
+}
 
 use crate::egl;
 use crate::output::OutputRendering;

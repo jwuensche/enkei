@@ -1,2 +1,3 @@
-mod scaling;
-mod error;
+pub mod scaling;
+pub mod error;
+pub mod image;
