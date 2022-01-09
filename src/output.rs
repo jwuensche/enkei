@@ -45,9 +45,7 @@ impl OutputRendering {
         layers: &Main<ZwlrLayerShellV1>,
         event_queue: &mut EventQueue,
         output: Arc<RwLock<Output>>,
-        egl_context: eglContext,
         egl_display: eglDisplay,
-        egl_config: eglConfig,
         buf_x: u32,
         buf_y: u32,
     ) -> Self {
@@ -124,4 +122,35 @@ impl OutputRendering {
         egl.swap_buffers(self.egl_display, self.egl_surface).unwrap();
         self.surface.commit();
     }
+}
+
+fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
+        let attributes = [
+                egl::RED_SIZE,
+                8,
+                egl::GREEN_SIZE,
+                8,
+                egl::BLUE_SIZE,
+                8,
+                egl::NONE,
+        ];
+
+        let config = egl.choose_first_config(display, &attributes)
+                .expect("unable to choose an EGL configuration")
+                .expect("no EGL configuration found");
+
+        let context_attributes = [
+                egl::CONTEXT_MAJOR_VERSION,
+                4,
+                egl::CONTEXT_MINOR_VERSION,
+                0,
+                egl::CONTEXT_OPENGL_PROFILE_MASK,
+                egl::CONTEXT_OPENGL_CORE_PROFILE_BIT,
+                egl::NONE,
+        ];
+
+        let context = egl.create_context(display, config, None, &context_attributes)
+                .expect("unable to create an EGL context");
+
+        (context, config)
 }

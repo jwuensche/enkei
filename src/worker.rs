@@ -56,14 +56,12 @@ pub fn work(
                 .expect("unable to select OpenGL API");
     gl::load_with(|name| egl.get_proc_address(name).unwrap() as *const std::ffi::c_void);
     let egl_display = setup_egl(&display);
-    let (egl_context, egl_config) = create_context(egl_display);
 
     let mut renders = Vec::new();
 
     let metadata = MetadataReader::read(path)?;
 
     // Process all pending requests
-    watchdog::timer::initialize(std::time::Duration::from_millis(16), 60, senders.clone());
     loop {
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
@@ -86,7 +84,7 @@ pub fn work(
                     let height = *lock.mode().unwrap().height();
                     drop(lock);
                     println!("Starting window on monitor..");
-                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_context, egl_display, egl_config, width as u32, height as u32));
+                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_display, width as u32, height as u32));
                     refresh_output(renders.last_mut().unwrap(), &metadata, Scaling::Fill, Filter::Best).expect("Could not refresh");
                     renders.last_mut().unwrap().draw(0.0);
                 },
@@ -102,7 +100,9 @@ pub fn work(
                 messages::WorkerMessage::Refresh => {
                     for output in renders.iter_mut() {
                         refresh_output(output, &metadata, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                        output.draw(0.0);
                     }
+                    // Cancel all running timer watchdogs
                 },
             }
         } else {
@@ -147,33 +147,3 @@ fn setup_egl(display: &Display) -> egl::Display {
         egl_display
 }
 
-fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
-        let attributes = [
-                egl::RED_SIZE,
-                8,
-                egl::GREEN_SIZE,
-                8,
-                egl::BLUE_SIZE,
-                8,
-                egl::NONE,
-        ];
-
-        let config = egl.choose_first_config(display, &attributes)
-                .expect("unable to choose an EGL configuration")
-                .expect("no EGL configuration found");
-
-        let context_attributes = [
-                egl::CONTEXT_MAJOR_VERSION,
-                4,
-                egl::CONTEXT_MINOR_VERSION,
-                0,
-                egl::CONTEXT_OPENGL_PROFILE_MASK,
-                egl::CONTEXT_OPENGL_CORE_PROFILE_BIT,
-                egl::NONE,
-        ];
-
-        let context = egl.create_context(display, config, None, &context_attributes)
-                .expect("unable to create an EGL context");
-
-        (context, config)
-}
