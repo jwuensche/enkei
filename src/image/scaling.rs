@@ -6,8 +6,9 @@ use cairo::{
 use super::error::ImageError;
 
 use crate::outputs::Mode;
+use clap::ArgEnum;
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, ArgEnum)]
 pub enum Filter {
     Fast,
     Good,
@@ -17,7 +18,7 @@ pub enum Filter {
     Gaussian,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, ArgEnum)]
 pub enum Scaling {
     Fill,
     Fit,

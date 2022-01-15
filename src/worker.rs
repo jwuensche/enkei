@@ -39,7 +39,7 @@ pub fn work(
     messages: Receiver<WorkerMessage>,
     senders: Sender<WorkerMessage>,
     mut event_queue: EventQueue,
-    path: &str,
+    metadata: Metadata,
 ) -> Result<(), ApplicationError> {
     /*
      * Init wayland objects
@@ -61,8 +61,6 @@ pub fn work(
 
     let mut renders = Vec::new();
     let mut ticker_active = false;
-
-    let metadata = MetadataReader::read(path)?;
 
     // Process all pending requests
     loop {

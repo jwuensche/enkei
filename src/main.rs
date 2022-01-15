@@ -2,12 +2,15 @@ use metadata::MetadataError;
 use wayland_client::{Main, global_filter};
 
 
-use std::sync::{Arc, RwLock, mpsc::channel};
+use std::{sync::{Arc, RwLock, mpsc::channel}, os::unix::prelude::MetadataExt};
 
 use wayland_client::{
     protocol::{wl_compositor, wl_output},
     Display, GlobalManager,
 };
+
+use clap::ArgEnum;
+use lazy_regex::regex_is_match;
 
 mod outputs;
 mod output;
@@ -32,6 +35,11 @@ use outputs::{
     handle_output_events,
 };
 
+use crate::image::scaling::{
+    Filter,
+    Scaling,
+};
+
 #[derive(Error, Debug)]
 pub enum ApplicationError {
     #[error("Could not access the member `{0}` in some struct.")]
@@ -39,7 +47,9 @@ pub enum ApplicationError {
     #[error("Image Processing failed: `{0}`")]
     ErrorWhileImageProcessing(ImageError),
     #[error("Reading of metadata failed: `{0}`")]
-    MetadataError(MetadataError)
+    MetadataError(MetadataError),
+    #[error("Could not determine data type, try to specify via --mode. Or check given file")]
+    InvalidDataType,
 }
 
 impl<'a> From<outputs::OutputError<'a>> for ApplicationError {
@@ -62,7 +72,87 @@ impl From<MetadataError> for ApplicationError {
     }
 }
 
+const FILE: &str = "FILE";
+const MODE: &str = "MODE";
+const SCALE: &str = "SCALE";
+const FILTER: &str = "FILTER";
+
+const NAME: &str = env!("CARGO_PKG_NAME");
+const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
+const DESC: &str = env!("CARGO_PKG_DESCRIPTION");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+const FILE_HELP: &str = "The path to the wallpaper to be shown. The mode, static or dynamic gets determined automatically by default, based on the file suffix.";
+const MODE_HELP: &str = "The display mode, static or dynamic, to be used for the given wallpaper. Normally this gets detected automatically based on the file suffix. If this is not possible set it explicitly here.";
+const SCALE_HELP: &str = "The scaling mode, which should be used to fit the image to the screen. Fit will try to fit the whole image to the screen, while Fill will try to fill the screen completely upscaling and cropping the image if necessary.";
+const FILTER_HELP: &str = "The filter method which should be applied when a wallpaper is scaled. Variants correspond to cairo filters.";
+
+use clap::Parser;
+
+#[derive(clap::Parser, Debug)]
+#[clap(
+    author = AUTHOR,
+    version = VERSION,
+    about = DESC,
+)]
+struct Args {
+    #[clap(
+        index = 1,
+        help = "The file to display.",
+        long_help = FILE_HELP,
+        takes_value = true,
+        required = true,
+    )]
+    file: String,
+    #[clap(
+        arg_enum,
+        short = 'f',
+        long = "filter",
+        help = "How to filter scaled images.",
+        long_help = FILTER_HELP,
+        default_value = "good",
+        takes_value = true,
+        ignore_case = true,
+    )]
+    filter: Filter,
+    #[clap(
+        arg_enum,
+        short = 's',
+        long = "scale",
+        help = "How to scale or crop images.",
+        long_help = SCALE_HELP,
+        default_value = "fill",
+        takes_value = true,
+        ignore_case = true,
+    )]
+    scale: Scaling,
+    #[clap(
+        arg_enum,
+        short = 'm',
+        long = "mode",
+        help = "The display mode which should be used for the given file.",
+        long_help = MODE_HELP,
+        takes_value = true,
+        ignore_case = true,
+    )]
+    mode: Option<Mode>,
+}
+
+
+#[derive(ArgEnum, Clone, Debug)]
+pub enum Mode {
+    Static,
+    Dynamic,
+}
+
+use crate::metadata::{
+    Metadata,
+    MetadataReader,
+};
+
 fn main() -> Result<(), ApplicationError> {
+    let args = Args::parse();
+
     let display = Display::connect_to_env().unwrap();
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
@@ -101,6 +191,30 @@ fn main() -> Result<(), ApplicationError> {
     */
     watchdog::sleeping::initialize(message_tx.clone());
 
-    worker::work(globals, display, message_rx, message_tx, event_queue, "/home/fred/Pictures/Taktop/Takt.xml")?;
+    /*
+     * Read Metadata or Prepare Static Mode
+    */
+    let metadata = {
+        match args.mode {
+            Some(Mode::Static) => {
+                MetadataReader::static_configuration(&args.file)
+            },
+            Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
+            None => {
+                if args.file.ends_with(".xml") {
+                    MetadataReader::read(args.file)?
+                } else if regex_is_match!(
+                    r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
+                    &args.file
+                ) {
+                    MetadataReader::static_configuration(&args.file)
+                } else {
+                    return Err(ApplicationError::InvalidDataType)
+                }
+            },
+        }
+    };
+
+    worker::work(globals, display, message_rx, message_tx, event_queue, metadata)?;
     Ok(())
 }

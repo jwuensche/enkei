@@ -2,18 +2,20 @@
 name = "enkei-reimplementation"
 version = "0.1.0"
 edition = "2018"
+description = "An OpenGL accelerated wallpaper tool with blending animations."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 cairo-rs = "0.14.9"
 chrono = "0.4.19"
-clap = "3.0.5"
+clap = { version = "3.0.7", features = ["derive"] }
 ezing = "0.2.1"
 getset = "0.1.2"
 gl = "0.14.0"
 image = "0.23.14"
 khronos-egl = { version = "4.1.0", features = ["static"] }
+lazy-regex = "2.2.2"
 log = "0.4.14"
 memfd = "0.4.1"
 send_wrapper = "0.5.0"
