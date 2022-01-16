@@ -2,7 +2,7 @@
 name = "enkei-reimplementation"
 version = "0.1.0"
 edition = "2018"
-description = "An OpenGL accelerated wallpaper tool with blending animations."
+description = "An OpenGL accelerated wallpaper tool with support for the Gnome Dyanmic Wallpaper definitions."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -72,17 +72,12 @@ impl From<MetadataError> for ApplicationError {
     }
 }
 
-const FILE: &str = "FILE";
-const MODE: &str = "MODE";
-const SCALE: &str = "SCALE";
-const FILTER: &str = "FILTER";
-
 const NAME: &str = env!("CARGO_PKG_NAME");
 const AUTHOR: &str = env!("CARGO_PKG_AUTHORS");
 const DESC: &str = env!("CARGO_PKG_DESCRIPTION");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-const FILE_HELP: &str = "The path to the wallpaper to be shown. The mode, static or dynamic gets determined automatically by default, based on the file suffix.";
+const FILE_HELP: &str = "The path to the wallpaper to be shown. The mode, static or dynamic, gets determined automatically by default, based on the file suffix.";
 const MODE_HELP: &str = "The display mode, static or dynamic, to be used for the given wallpaper. Normally this gets detected automatically based on the file suffix. If this is not possible set it explicitly here.";
 const SCALE_HELP: &str = "The scaling mode, which should be used to fit the image to the screen. Fit will try to fit the whole image to the screen, while Fill will try to fill the screen completely upscaling and cropping the image if necessary.";
 const FILTER_HELP: &str = "The filter method which should be applied when a wallpaper is scaled. Variants correspond to cairo filters.";
@@ -91,6 +86,7 @@ use clap::Parser;
 
 #[derive(clap::Parser, Debug)]
 #[clap(
+    name = NAME,
     author = AUTHOR,
     version = VERSION,
     about = DESC,
@@ -153,6 +149,9 @@ use crate::metadata::{
 fn main() -> Result<(), ApplicationError> {
     let args = Args::parse();
 
+    /*
+     * Setup display initials for wayland
+    */
     let display = Display::connect_to_env().unwrap();
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
