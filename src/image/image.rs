@@ -29,7 +29,7 @@ impl Image {
         })
     }
 
-    pub fn process(self, mode: &Mode) -> Result<Vec<u8>, ImageError> {
+    pub fn process(&self, mode: &Mode) -> Result<Vec<u8>, ImageError> {
         self.scaling.scale(&self.inner, mode, self.filter)
     }
 }

@@ -21,6 +21,7 @@ mod messages;
 mod watchdog;
 mod worker;
 mod image;
+mod util;
 
 use crate::image::error::ImageError;
 

@@ -23,13 +23,14 @@ use image::GenericImageView;
 use crate::image::scaling::{
     Scaling,
     Filter,
-
 };
+
 use crate::messages::{self, WorkerMessage};
 use crate::metadata::{MetadataReader, Metadata, MetadataError, State};
 use crate::outputs::Output;
 use crate::watchdog::{self, timer};
 use crate::ApplicationError;
+use crate::util::ResourceLoader;
 
 const FPS: f64 = 60.0;
 
@@ -59,18 +60,24 @@ pub fn work(
     gl::load_with(|name| egl.get_proc_address(name).unwrap() as *const std::ffi::c_void);
     let egl_display = setup_egl(&display);
 
+    // Use an output independent store for loaded images, allows for some reduction in IO time
+    let mut resource_loader = ResourceLoader::new();
+
     let mut renders = Vec::new();
     let mut ticker_active = false;
 
     // Process all pending requests
     loop {
+        println!("Entering loop");
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
                 dbg!(event);
             })
             .unwrap();
+        println!("Processed messages");
 
         if let Ok(msg) = messages.try_recv() {
+            dbg!(&msg);
             // do something with new found messages
             match msg {
                 messages::WorkerMessage::AddOutput(output) => {
@@ -88,7 +95,7 @@ pub fn work(
                     renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_display, width as u32, height as u32));
                     let output = renders.last_mut().unwrap();
                     let state = metadata.current()?;
-                    refresh_output(output, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                    refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
                     state_draw(&state, output, &mut ticker_active, senders.clone());
                 },
                 messages::WorkerMessage::RemoveOutput(output) => {
@@ -97,8 +104,10 @@ pub fn work(
                 messages::WorkerMessage::AnimationStep(process) => {
                     println!("Message: AnimationStep");
                     for output in renders.iter() {
+                        println!("Drawing output: {:?}", output);
                         output.draw(ezing::quad_inout(process));
                     }
+                    println!("Finished animation drawing");
                     if process >= 1.0 {
                         senders.send(WorkerMessage::Refresh).expect("This should never break");
                     }
@@ -114,13 +123,14 @@ pub fn work(
                     println!("Message: Refresh");
                     let state = metadata.current()?;
                     for output in renders.iter_mut() {
-                        refresh_output(output, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                        refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
                     // Cancel all running timer watchdogs
                 },
             }
         } else {
+            println!("Got no message, waiting...");
             std::thread::sleep(std::time::Duration::from_secs(1));
         }
 
@@ -155,7 +165,7 @@ fn state_draw(state: &State, output: &mut OutputRendering, ticker_active: &mut b
     }
 }
 
-fn refresh_output(output: &mut OutputRendering, metadata: &State, scaling: Scaling, filter: Filter) -> Result<(), MetadataError>{
+fn refresh_output(output: &mut OutputRendering, resources: &mut ResourceLoader, metadata: &State, scaling: Scaling, filter: Filter) -> Result<(), MetadataError>{
     let lock = output.output.read().unwrap();
     let width = *lock.mode().unwrap().width();
     let height = *lock.mode().unwrap().height();
@@ -175,10 +185,10 @@ fn refresh_output(output: &mut OutputRendering, metadata: &State, scaling: Scali
         },
     }
 
-    let mut from = crate::image::image::Image::new(transition.from(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
+    let mut from = resources.load(transition.from(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
     output.set_from(&mut from, width, height);
     if transition.is_animated() {
-        let mut to = crate::image::image::Image::new(transition.to().unwrap(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
+        let mut to = resources.load(transition.to().unwrap(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
         output.set_to(&mut to, width, height);
     } else {
         output.set_to(&mut from, width, height);

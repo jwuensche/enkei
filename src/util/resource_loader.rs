@@ -1,0 +1,28 @@
+use std::collections::HashMap;
+
+use crate::image::{image::Image, error::ImageError, scaling::{Scaling, Filter}};
+
+pub struct ResourceLoader {
+    loaded: HashMap<String, Image>,
+}
+
+impl ResourceLoader {
+    pub fn new() -> Self {
+        Self {
+            loaded: HashMap::new(),
+        }
+    }
+
+    pub fn load(&mut self, path: &String, scaling: Scaling, filter: Filter) -> Result<&Image, ImageError> {
+        // workaround as this introduces nastier non-lexical lifetimes
+        if self.loaded.contains_key(path) {
+            // The scaling and filter cannot differ
+            println!("Used the stored data!");
+            return Ok(self.loaded.get(path).unwrap());
+        }
+
+        let surface = Image::new(path, scaling, filter)?;
+        self.loaded.insert(path.clone(), surface);
+        return Ok(self.loaded.get_mut(path).expect("Insertion was somehow misreported."))
+    }
+}
