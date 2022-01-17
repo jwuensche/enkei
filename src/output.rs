@@ -31,6 +31,7 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
 #[derive(Debug)]
 pub struct OutputRendering {
     pub output: Arc<RwLock<Output>>,
+    output_id: u32,
     surface: Main<WlSurface>,
     egl_context: eglContext,
     egl_display: eglDisplay,
@@ -52,6 +53,7 @@ impl OutputRendering {
         let surface = compositor.create_surface();
         surface.commit();
         let lock = output.read().unwrap();
+        let output_id = lock.id();
         let background =
             layers.get_layer_surface(&surface, Some(lock.inner()), Layer::Background, "wallpaper".into());
         background.set_layer(Layer::Background);
@@ -98,6 +100,7 @@ impl OutputRendering {
         drop(lock);
         OutputRendering {
             output,
+            output_id,
             surface,
             egl_context,
             wl_egl_surface,
@@ -114,6 +117,10 @@ impl OutputRendering {
     pub fn set_from<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
         egl.make_current(self.egl_display, Some(self.egl_surface), Some(self.egl_surface), Some(self.egl_context)).unwrap();
         self.gl_context.set_from(image, width.into(), height.into())
+    }
+
+    pub fn output_id(&self) -> u32 {
+        self.output_id
     }
 
     pub fn draw(&self, process: f32) {

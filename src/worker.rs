@@ -77,29 +77,49 @@ pub fn work(
         println!("Processed messages");
 
         if let Ok(msg) = messages.try_recv() {
-            dbg!(&msg);
             // do something with new found messages
             match msg {
-                messages::WorkerMessage::AddOutput(output) => {
+                messages::WorkerMessage::AddOutput(output, id) => {
                     println!("Message: AddOutput");
-                    let lock = output.read().unwrap();
-                    if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
-                        println!("Found output {} {}:", geo.make(), geo.model());
-                        println!("      Resolution: {}x{}", mode.width(), mode.height());
-                        println!("      Position: {}x{}", geo.x(), geo.y());
+
+                    if renders.iter().filter(|elem: &&OutputRendering| elem.output_id() == id).count() > 0 {
+                        println!("Display updated and not new.");
+                    } else {
+                        let lock = output.read().unwrap();
+                        if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
+                            println!("Found output {} {}:", geo.make(), geo.model());
+                            println!("      Resolution: {}x{}", mode.width(), mode.height());
+                            println!("      Position: {}x{}", geo.x(), geo.y());
+                        }
+                        let width = *lock.mode().unwrap().width();
+                        let height = *lock.mode().unwrap().height();
+                        drop(lock);
+                        println!("Starting window on monitor..");
+                        renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_display, width as u32, height as u32));
+                        let output = renders.last_mut().unwrap();
+                        let state = metadata.current()?;
+                        refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                        state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
-                    let width = *lock.mode().unwrap().width();
-                    let height = *lock.mode().unwrap().height();
-                    drop(lock);
-                    println!("Starting window on monitor..");
-                    renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_display, width as u32, height as u32));
-                    let output = renders.last_mut().unwrap();
-                    let state = metadata.current()?;
-                    refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
-                    state_draw(&state, output, &mut ticker_active, senders.clone());
+
                 },
-                messages::WorkerMessage::RemoveOutput(output) => {
-                    todo!()
+                messages::WorkerMessage::RemoveOutput(id) => {
+                    println!("Message: RemoveOutput");
+                    let mut res = renders.iter().enumerate().filter_map(|elem| {
+                        let lock = elem.1.output.read().unwrap();
+                        if lock.id() == id {
+                            Some(elem.0)
+                        } else {
+                            None
+                        }
+                    });
+
+                    if let Some(valid) = res.next() {
+                        println!("Removing Output");
+                        dbg!(&renders);
+                        renders.swap_remove(valid);
+                        dbg!(&renders);
+                    }
                 },
                 messages::WorkerMessage::AnimationStep(process) => {
                     println!("Message: AnimationStep");

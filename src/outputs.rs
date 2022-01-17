@@ -25,6 +25,7 @@ pub struct Output {
     mode: Option<Mode>,
     scale: i32,
     inner: Main<wl_output::WlOutput>,
+    id: u32,
 }
 
 #[derive(Getters, Debug, Clone)]
@@ -61,12 +62,13 @@ pub struct Geometry {
 }
 
 impl Output {
-    pub fn new(inner: Main<wl_output::WlOutput>) -> Self {
+    pub fn new(inner: Main<wl_output::WlOutput>, id: u32) -> Self {
         Self {
             geometry: None,
             mode: None,
             scale: 1,
             inner,
+            id,
         }
     }
 
@@ -85,13 +87,17 @@ impl Output {
     pub fn inner(&self) -> &WlOutput {
         &self.inner
     }
+
+    pub fn id(&self) -> u32 {
+        self.id
+    }
 }
 
 pub struct OutputManager {
     inner: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>,
 }
 
-pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, added: &Sender<WorkerMessage>) {
+pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, added: &Sender<WorkerMessage>, id: u32) {
     match event {
         wl_output::Event::Geometry { x, y, physical_width, physical_height, subpixel, make, model, transform } => {
             let mut lock = pass.write().expect("Could not lock output object");
@@ -120,7 +126,7 @@ pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event,
             lock.scale = factor;
         },
         wl_output::Event::Done => added.send(
-            WorkerMessage::AddOutput(SendWrapper::new(Arc::clone(&pass)))
+            WorkerMessage::AddOutput(SendWrapper::new(Arc::clone(&pass)), id)
         ).unwrap(),
         _ => unreachable!(),
     }
