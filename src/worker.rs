@@ -68,10 +68,9 @@ pub fn work(
 
     // Process all pending requests
     loop {
-        println!("Entering loop");
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
-                dbg!(event);
+                unreachable!();
             })
             .unwrap();
         println!("Processed messages");
@@ -151,7 +150,7 @@ pub fn work(
             }
         } else {
             println!("Got no message, waiting...");
-            std::thread::sleep(std::time::Duration::from_secs(1));
+            std::thread::sleep(std::time::Duration::from_millis(500));
         }
 
     }

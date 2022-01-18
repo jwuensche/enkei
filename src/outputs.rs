@@ -93,10 +93,6 @@ impl Output {
     }
 }
 
-pub struct OutputManager {
-    inner: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>,
-}
-
 pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, added: &Sender<WorkerMessage>, id: u32) {
     match event {
         wl_output::Event::Geometry { x, y, physical_width, physical_height, subpixel, make, model, transform } => {
@@ -129,18 +125,5 @@ pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event,
             WorkerMessage::AddOutput(SendWrapper::new(Arc::clone(&pass)), id)
         ).unwrap(),
         _ => unreachable!(),
-    }
-}
-
-impl OutputManager {
-    pub fn new(output_handles: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>) -> Self {
-        let obj = Self {
-            inner: output_handles,
-        };
-        obj
-    }
-
-    pub fn outputs(&self) -> Option<RwLockReadGuard<Vec<Arc<RwLock<Output>>>>> {
-        self.inner.read().ok()
     }
 }
