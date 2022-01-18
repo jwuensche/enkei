@@ -1,36 +1,23 @@
 use std::io::Read;
-use std::sync::mpsc::{
-    Sender, Receiver,
-};
+use std::sync::mpsc::{Receiver, Sender};
 
-use std::sync::{
-    Arc,
-    RwLock,
-};
+use std::sync::{Arc, RwLock};
 
-use wayland_client::{
-    GlobalManager,
-    Display, EventQueue,
-};
+use wayland_client::{Display, EventQueue, GlobalManager};
 
-use wayland_client::protocol::{
-    wl_compositor,
-};
+use wayland_client::protocol::wl_compositor;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 
 use image::GenericImageView;
 
-use crate::image::scaling::{
-    Scaling,
-    Filter,
-};
+use crate::image::scaling::{Filter, Scaling};
 
 use crate::messages::{self, WorkerMessage};
-use crate::metadata::{MetadataReader, Metadata, MetadataError, State};
+use crate::metadata::{Metadata, MetadataError, MetadataReader, State};
 use crate::outputs::Output;
+use crate::util::ResourceLoader;
 use crate::watchdog::{self, timer};
 use crate::ApplicationError;
-use crate::util::ResourceLoader;
 
 const FPS: f64 = 60.0;
 
@@ -56,7 +43,7 @@ pub fn work(
     // Create the egl surfaces here and setup the whole party, this should be taken into it's own module but for testing reasons
     // it can still be found here.
     egl.bind_api(egl::OPENGL_API)
-                .expect("unable to select OpenGL API");
+        .expect("unable to select OpenGL API");
     gl::load_with(|name| egl.get_proc_address(name).unwrap() as *const std::ffi::c_void);
     let egl_display = setup_egl(&display);
 
@@ -81,7 +68,12 @@ pub fn work(
                 messages::WorkerMessage::AddOutput(output, id) => {
                     println!("Message: AddOutput");
 
-                    if renders.iter().filter(|elem: &&OutputRendering| elem.output_id() == id).count() > 0 {
+                    if renders
+                        .iter()
+                        .filter(|elem: &&OutputRendering| elem.output_id() == id)
+                        .count()
+                        > 0
+                    {
                         println!("Display updated and not new.");
                     } else {
                         let lock = output.read().unwrap();
@@ -94,14 +86,28 @@ pub fn work(
                         let height = *lock.mode().unwrap().height();
                         drop(lock);
                         println!("Starting window on monitor..");
-                        renders.push(OutputRendering::new(&compositor, &layers, &mut event_queue, Arc::clone(&output), egl_display, width as u32, height as u32));
+                        renders.push(OutputRendering::new(
+                            &compositor,
+                            &layers,
+                            &mut event_queue,
+                            Arc::clone(&output),
+                            egl_display,
+                            width as u32,
+                            height as u32,
+                        ));
                         let output = renders.last_mut().unwrap();
                         let state = metadata.current()?;
-                        refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                        refresh_output(
+                            output,
+                            &mut resource_loader,
+                            &state,
+                            Scaling::Fill,
+                            Filter::Best,
+                        )
+                        .expect("Could not refresh");
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
-
-                },
+                }
                 messages::WorkerMessage::RemoveOutput(id) => {
                     println!("Message: RemoveOutput");
                     let mut res = renders.iter().enumerate().filter_map(|elem| {
@@ -119,7 +125,7 @@ pub fn work(
                         renders.swap_remove(valid);
                         dbg!(&renders);
                     }
-                },
+                }
                 messages::WorkerMessage::AnimationStep(process) => {
                     println!("Message: AnimationStep");
                     for output in renders.iter() {
@@ -128,63 +134,111 @@ pub fn work(
                     }
                     println!("Finished animation drawing");
                     if process >= 1.0 {
-                        senders.send(WorkerMessage::Refresh).expect("This should never break");
+                        senders
+                            .send(WorkerMessage::Refresh)
+                            .expect("This should never break");
                     }
-                },
+                }
                 messages::WorkerMessage::AnimationStart(duration) => {
                     println!("Message: AnimationStart");
-                    let count = (duration * FPS).clamp(1.0,600.0);
-                    println!("Spawn Ticker (step duration: {}s, count: {})", duration / count, count as u64);
-                    timer::spawn_animation_ticker(std::time::Duration::from_secs_f64(duration / count), count as u64, 0, senders.clone());
+                    let count = (duration * FPS).clamp(1.0, 600.0);
+                    println!(
+                        "Spawn Ticker (step duration: {}s, count: {})",
+                        duration / count,
+                        count as u64
+                    );
+                    timer::spawn_animation_ticker(
+                        std::time::Duration::from_secs_f64(duration / count),
+                        count as u64,
+                        0,
+                        senders.clone(),
+                    );
                 }
                 messages::WorkerMessage::Refresh => {
                     ticker_active = false;
                     println!("Message: Refresh");
                     let state = metadata.current()?;
                     for output in renders.iter_mut() {
-                        refresh_output(output, &mut resource_loader, &state, Scaling::Fill, Filter::Best).expect("Could not refresh");
+                        refresh_output(
+                            output,
+                            &mut resource_loader,
+                            &state,
+                            Scaling::Fill,
+                            Filter::Best,
+                        )
+                        .expect("Could not refresh");
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
                     // Cancel all running timer watchdogs
-                },
+                }
             }
         } else {
             println!("Got no message, waiting...");
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
-
     }
 }
 
-fn state_draw(state: &State, output: &mut OutputRendering, ticker_active: &mut bool, senders: Sender<WorkerMessage>) {
+fn state_draw(
+    state: &State,
+    output: &mut OutputRendering,
+    ticker_active: &mut bool,
+    senders: Sender<WorkerMessage>,
+) {
     match state {
         State::Static(progress, transition) => {
             if transition.is_animated() && !*ticker_active {
-                println!("Spawn Simple Timer(duration: {}s, transition: {}s)", transition.duration_static() - progress, transition.duration_transition());
-                timer::spawn_simple_timer(std::time::Duration::from_secs_f64(transition.duration_static() - progress), senders.clone(), WorkerMessage::AnimationStart(transition.duration_transition()));
+                println!(
+                    "Spawn Simple Timer(duration: {}s, transition: {}s)",
+                    transition.duration_static() - progress,
+                    transition.duration_transition()
+                );
+                timer::spawn_simple_timer(
+                    std::time::Duration::from_secs_f64(transition.duration_static() - progress),
+                    senders.clone(),
+                    WorkerMessage::AnimationStart(transition.duration_transition()),
+                );
                 *ticker_active = true;
             } else if !*ticker_active {
-                println!("Spawn Simple Timer(duration: {}s)", transition.duration_static() - progress);
-                timer::spawn_simple_timer(std::time::Duration::from_secs_f64(transition.duration_static() - progress), senders.clone(), WorkerMessage::Refresh);
+                println!(
+                    "Spawn Simple Timer(duration: {}s)",
+                    transition.duration_static() - progress
+                );
+                timer::spawn_simple_timer(
+                    std::time::Duration::from_secs_f64(transition.duration_static() - progress),
+                    senders.clone(),
+                    WorkerMessage::Refresh,
+                );
                 *ticker_active = true;
             }
             output.draw(0.0);
-        },
+        }
         State::Transition(progress, transition) => {
             // This state is always animated
             let count = (transition.duration_transition() * FPS).clamp(1.0, 600.0);
             let step = transition.duration_transition() / count;
             let finished = progress / step;
             if !*ticker_active {
-                timer::spawn_animation_ticker(std::time::Duration::from_secs_f64(step), count as u64, finished as u64, senders.clone());
+                timer::spawn_animation_ticker(
+                    std::time::Duration::from_secs_f64(step),
+                    count as u64,
+                    finished as u64,
+                    senders.clone(),
+                );
                 *ticker_active = true;
             }
             output.draw((finished / count) as f32);
-        },
+        }
     }
 }
 
-fn refresh_output(output: &mut OutputRendering, resources: &mut ResourceLoader, metadata: &State, scaling: Scaling, filter: Filter) -> Result<(), MetadataError>{
+fn refresh_output(
+    output: &mut OutputRendering,
+    resources: &mut ResourceLoader,
+    metadata: &State,
+    scaling: Scaling,
+    filter: Filter,
+) -> Result<(), MetadataError> {
     let lock = output.output.read().unwrap();
     let width = *lock.mode().unwrap().width();
     let height = *lock.mode().unwrap().height();
@@ -197,17 +251,25 @@ fn refresh_output(output: &mut OutputRendering, resources: &mut ResourceLoader, 
         State::Static(p, t) => {
             progress = p;
             transition = t;
-        },
+        }
         State::Transition(p, t) => {
             progress = p;
             transition = t;
-        },
+        }
     }
 
-    let mut from = resources.load(transition.from(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
+    let mut from = resources
+        .load(transition.from(), scaling, filter)
+        .unwrap()
+        .process(&mode)
+        .expect("Could not get Image data");
     output.set_from(&mut from, width, height);
     if transition.is_animated() {
-        let mut to = resources.load(transition.to().unwrap(), scaling, filter).unwrap().process(&mode).expect("Could not get Image data");
+        let mut to = resources
+            .load(transition.to().unwrap(), scaling, filter)
+            .unwrap()
+            .process(&mode)
+            .expect("Could not get Image data");
         output.set_to(&mut to, width, height);
     } else {
         output.set_to(&mut from, width, height);
@@ -219,8 +281,9 @@ use crate::egl;
 use crate::output::OutputRendering;
 
 fn setup_egl(display: &Display) -> egl::Display {
-        let egl_display = egl.get_display(display.get_display_ptr() as *mut std::ffi::c_void).unwrap();
-        egl.initialize(egl_display).unwrap();
-        egl_display
+    let egl_display = egl
+        .get_display(display.get_display_ptr() as *mut std::ffi::c_void)
+        .unwrap();
+    egl.initialize(egl_display).unwrap();
+    egl_display
 }
-

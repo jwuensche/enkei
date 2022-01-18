@@ -1,8 +1,12 @@
 use metadata::MetadataError;
-use wayland_client::{Main, global_filter, GlobalEvent, Attached, protocol::wl_registry::WlRegistry};
+use wayland_client::{
+    global_filter, protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main,
+};
 
-
-use std::{sync::{Arc, RwLock, mpsc::channel}, os::unix::prelude::MetadataExt};
+use std::{
+    os::unix::prelude::MetadataExt,
+    sync::{mpsc::channel, Arc, RwLock},
+};
 
 use wayland_client::{
     protocol::{wl_compositor, wl_output},
@@ -12,16 +16,16 @@ use wayland_client::{
 use clap::ArgEnum;
 use lazy_regex::regex_is_match;
 
-mod outputs;
-mod output;
-mod schema;
-mod opengl;
-mod metadata;
+mod image;
 mod messages;
+mod metadata;
+mod opengl;
+mod output;
+mod outputs;
+mod schema;
+mod util;
 mod watchdog;
 mod worker;
-mod image;
-mod util;
 
 use crate::image::error::ImageError;
 
@@ -31,15 +35,9 @@ use khronos_egl as egl;
 // global api object
 use egl::API as egl;
 
-use outputs::{
-    Output,
-    handle_output_events,
-};
+use outputs::{handle_output_events, Output};
 
-use crate::image::scaling::{
-    Filter,
-    Scaling,
-};
+use crate::image::scaling::{Filter, Scaling};
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
@@ -135,24 +133,20 @@ struct Args {
     mode: Option<Mode>,
 }
 
-
 #[derive(ArgEnum, Clone, Debug)]
 pub enum Mode {
     Static,
     Dynamic,
 }
 
-use crate::metadata::{
-    Metadata,
-    MetadataReader,
-};
+use crate::metadata::{Metadata, MetadataReader};
 
 fn main() -> Result<(), ApplicationError> {
     let args = Args::parse();
 
     /*
      * Setup display initials for wayland
-    */
+     */
     let display = Display::connect_to_env().unwrap();
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
@@ -168,7 +162,11 @@ fn main() -> Result<(), ApplicationError> {
         move |event: GlobalEvent, data: Attached<WlRegistry>, _| {
             dbg!(&event);
             match event {
-                GlobalEvent::New { id, interface, version } if interface == "wl_output" => {
+                GlobalEvent::New {
+                    id,
+                    interface,
+                    version,
+                } if interface == "wl_output" => {
                     println!("Got a new WlOutput instance!");
                     let output: Main<wl_output::WlOutput> = data.bind(version, id);
                     let new_output = Arc::new(RwLock::new(Output::new(output.clone(), id)));
@@ -180,7 +178,7 @@ fn main() -> Result<(), ApplicationError> {
                     let mut lock = pass_outputs.write().unwrap();
                     lock.push(new_output);
                     drop(lock);
-                },
+                }
                 GlobalEvent::Removed { id, interface } if interface == "wl_output" => {
                     println!("Removed a WlOutput instance!");
                     let mut lock = pass_outputs.write().unwrap();
@@ -196,10 +194,10 @@ fn main() -> Result<(), ApplicationError> {
                         let data = lock.swap_remove(valid);
                         tx.send(messages::WorkerMessage::RemoveOutput(id)).unwrap();
                     }
-                },
-                _ => {},
+                }
+                _ => {}
             }
-        }
+        },
     );
 
     // let globals = GlobalManager::new_with_cb(
@@ -218,17 +216,15 @@ fn main() -> Result<(), ApplicationError> {
 
     /*
      * Initialize Watchdogs for Suspension Cycles
-    */
+     */
     watchdog::sleeping::initialize(message_tx.clone());
 
     /*
      * Read Metadata or Prepare Static Mode
-    */
+     */
     let metadata = {
         match args.mode {
-            Some(Mode::Static) => {
-                MetadataReader::static_configuration(&args.file)
-            },
+            Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
             Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
             None => {
                 if args.file.ends_with(".xml") {
@@ -239,12 +235,19 @@ fn main() -> Result<(), ApplicationError> {
                 ) {
                     MetadataReader::static_configuration(&args.file)
                 } else {
-                    return Err(ApplicationError::InvalidDataType)
+                    return Err(ApplicationError::InvalidDataType);
                 }
-            },
+            }
         }
     };
 
-    worker::work(globals, display, message_rx, message_tx, event_queue, metadata)?;
+    worker::work(
+        globals,
+        display,
+        message_rx,
+        message_tx,
+        event_queue,
+        metadata,
+    )?;
     Ok(())
 }

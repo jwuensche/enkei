@@ -1,7 +1,4 @@
-use gl::types::{
-    GLenum,
-    GLint,
-};
+use gl::types::{GLenum, GLint};
 
 use super::error::check_error;
 
@@ -10,7 +7,6 @@ pub struct Shader {
     id: u32,
     kind: GLenum,
 }
-
 
 const VSHADER: &[u8] = b"#version 150 core
 in vec2 position;
@@ -44,15 +40,11 @@ void main()
 
 impl Shader {
     pub fn new_vertex() -> Self {
-        unsafe {
-            Self::new(VSHADER, gl::VERTEX_SHADER)
-        }
+        unsafe { Self::new(VSHADER, gl::VERTEX_SHADER) }
     }
 
     pub fn new_fragment() -> Self {
-        unsafe {
-            Self::new(FRAGSHADER, gl::FRAGMENT_SHADER)
-        }
+        unsafe { Self::new(FRAGSHADER, gl::FRAGMENT_SHADER) }
     }
 
     unsafe fn new(src: &[u8], kind: GLenum) -> Self {
@@ -67,10 +59,7 @@ impl Shader {
             std::process::exit(1);
         }
         check_error("Shader Creation");
-        Self {
-            id: shader,
-            kind,
-        }
+        Self { id: shader, kind }
     }
 
     pub fn id(&self) -> u32 {

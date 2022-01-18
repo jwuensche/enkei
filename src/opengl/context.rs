@@ -1,5 +1,5 @@
-use super::shader::Shader;
 use super::error::check_error;
+use super::shader::Shader;
 use log::debug;
 
 #[derive(Debug)]
@@ -55,7 +55,14 @@ impl Program {
             check_error("pre call");
             gl::EnableVertexAttribArray(pos_attrib as u32);
             check_error("Argument linking");
-            gl::VertexAttribPointer(pos_attrib as u32, 2, gl::FLOAT, gl::FALSE, (4 * std::mem::size_of::<f32>()) as gl::types::GLint, std::ptr::null());
+            gl::VertexAttribPointer(
+                pos_attrib as u32,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * std::mem::size_of::<f32>()) as gl::types::GLint,
+                std::ptr::null(),
+            );
             check_error("shady call");
         }
         debug!("Linking \"texcoord\" argument");
@@ -65,8 +72,14 @@ impl Program {
             check_error("pre call");
             gl::EnableVertexAttribArray(tex_attrib as u32);
             check_error("TexCoord Argument Linking");
-            gl::VertexAttribPointer(tex_attrib as u32, 2, gl::FLOAT, gl::FALSE, (4 * std::mem::size_of::<f32>()) as gl::types::GLint,
-                                    (2 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid);
+            gl::VertexAttribPointer(
+                tex_attrib as u32,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                (4 * std::mem::size_of::<f32>()) as gl::types::GLint,
+                (2 * std::mem::size_of::<f32>()) as *const gl::types::GLvoid,
+            );
             check_error("after tex attrib");
         }
         debug!("Done Linking.");
@@ -77,15 +90,15 @@ impl Context {
     pub fn new(width: i32, height: i32) -> Self {
         let vertices: [f32; 16] = [
             // Positions    // TexCoords
-            -1.0,  1.0,     0.0, 0.0,       // top-left
-             1.0,  1.0,     1.0, 0.0,       // top-right
-             1.0, -1.0,     1.0, 1.0,       // bottom-right
-            -1.0, -1.0,     0.0, 1.0,       // bottom-left
+            -1.0, 1.0, 0.0, 0.0, // top-left
+            1.0, 1.0, 1.0, 0.0, // top-right
+            1.0, -1.0, 1.0, 1.0, // bottom-right
+            -1.0, -1.0, 0.0, 1.0, // bottom-left
         ];
 
         let elements: [i32; 6] = [
-            0, 1, 2,    // upper right
-            0, 2, 3     // lower left
+            0, 1, 2, // upper right
+            0, 2, 3, // lower left
         ];
 
         let mut vao = 0u32;
@@ -97,13 +110,23 @@ impl Context {
 
             gl::GenBuffers(1, &mut vbo);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-            gl::BufferData(gl::ARRAY_BUFFER, std::mem::size_of_val(&vertices) as isize, vertices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                std::mem::size_of_val(&vertices) as isize,
+                vertices.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             // Create Element Buffer
             gl::GenBuffers(1, &mut ebo);
 
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, std::mem::size_of_val(&elements) as isize, elements.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                std::mem::size_of_val(&elements) as isize,
+                elements.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             check_error("Buffer Creation");
         }
@@ -152,15 +175,33 @@ impl Context {
     }
 
     unsafe fn set_image(&self, pic: &Vec<u8>, width: i32, height: i32, tex_id: u32) -> () {
-            gl::BindTexture(gl::TEXTURE_2D, tex_id);
-            gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, width, height, 0, gl::RGB, gl::UNSIGNED_BYTE, pic.as_ptr() as *const gl::types::GLvoid);
-            check_error("image load");
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-            check_error("set mag filter");
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::CLAMP_TO_BORDER as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::CLAMP_TO_BORDER as i32);
-            check_error("set border");
+        gl::BindTexture(gl::TEXTURE_2D, tex_id);
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGB as i32,
+            width,
+            height,
+            0,
+            gl::RGB,
+            gl::UNSIGNED_BYTE,
+            pic.as_ptr() as *const gl::types::GLvoid,
+        );
+        check_error("image load");
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        check_error("set mag filter");
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_S,
+            gl::CLAMP_TO_BORDER as i32,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_T,
+            gl::CLAMP_TO_BORDER as i32,
+        );
+        check_error("set border");
     }
 
     pub fn draw(&self, ratio: f32) {
@@ -174,5 +215,4 @@ impl Context {
             check_error("Drawing");
         }
     }
-
 }

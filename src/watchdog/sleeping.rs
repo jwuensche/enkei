@@ -14,7 +14,9 @@ pub fn initialize(sender: Sender<WorkerMessage>) {
         let end = Local::now();
         if (end - start).num_seconds() > 10 {
             println!("Detected Sleeping Cycle. Send Refresh to worker thread.");
-            sender.send(WorkerMessage::Refresh).expect("Sleeping Watchdog could not bark!");
+            sender
+                .send(WorkerMessage::Refresh)
+                .expect("Sleeping Watchdog could not bark!");
         }
     });
 }

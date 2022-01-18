@@ -1,7 +1,4 @@
-use cairo::{
-    ImageSurface,
-    Rectangle,
-};
+use cairo::{ImageSurface, Rectangle};
 
 use super::error::ImageError;
 
@@ -44,31 +41,32 @@ impl Scaling {
         let pad_height = (*geometry.height() as f64 - buf.height() as f64) / 2.0;
 
         {
-            let target =
-                cairo::ImageSurface::create(cairo::Format::Rgb24, *geometry.width(), *geometry.height())
-                    .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
-            let ctx = cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
-            ctx.set_source_surface(buf, pad_width, pad_height).map_err(|e| ImageError::CouldNotSetSource(e))?;
-            ctx.paint().map_err(|e| ImageError::CouldNotWriteResult(e))?;
+            let target = cairo::ImageSurface::create(
+                cairo::Format::Rgb24,
+                *geometry.width(),
+                *geometry.height(),
+            )
+            .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
+            let ctx =
+                cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
+            ctx.set_source_surface(buf, pad_width, pad_height)
+                .map_err(|e| ImageError::CouldNotSetSource(e))?;
+            ctx.paint()
+                .map_err(|e| ImageError::CouldNotWriteResult(e))?;
             drop(ctx);
 
-            Ok(target.take_data().map_err(|e| ImageError::CouldNotGetData(e))?.to_vec())
+            Ok(target
+                .take_data()
+                .map_err(|e| ImageError::CouldNotGetData(e))?
+                .to_vec())
         }
     }
 
-    fn fit(
-        buf: &ImageSurface,
-        geometry: &Mode,
-        filter: Filter,
-    ) -> Result<Vec<u8>, ImageError> {
+    fn fit(buf: &ImageSurface, geometry: &Mode, filter: Filter) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::min)
     }
 
-    fn fill(
-        buf: &ImageSurface,
-        geometry: &Mode,
-        filter: Filter,
-    ) -> Result<Vec<u8>, ImageError> {
+    fn fill(buf: &ImageSurface, geometry: &Mode, filter: Filter) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 
@@ -98,18 +96,30 @@ impl Scaling {
             .clamp(-(*geometry.width() as f64), *geometry.width() as f64);
         // Create context and scale and crop to fit
         {
-            let target =
-                cairo::ImageSurface::create(cairo::Format::Rgb24, *geometry.width(), *geometry.height())
-                    .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
-            let ctx = cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
+            let target = cairo::ImageSurface::create(
+                cairo::Format::Rgb24,
+                *geometry.width(),
+                *geometry.height(),
+            )
+            .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
+            let ctx =
+                cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
             ctx.scale(max_ratio, max_ratio);
-            ctx.set_source_surface(buf, -crop_width, -crop_height).map_err(|e| ImageError::CouldNotSetSource(e))?;
+            ctx.set_source_surface(buf, -crop_width, -crop_height)
+                .map_err(|e| ImageError::CouldNotSetSource(e))?;
             ctx.source().set_filter(filter.into());
-            ctx.paint().map_err(|e| ImageError::CouldNotWriteResult(e))?;
+            ctx.paint()
+                .map_err(|e| ImageError::CouldNotWriteResult(e))?;
             drop(ctx);
 
-            let data = target.take_data().map_err(|e| ImageError::CouldNotGetData(e))?.to_vec();
-            Ok(data.chunks_exact(4).flat_map(|arr| [arr[2], arr[1], arr[0]]).collect())
+            let data = target
+                .take_data()
+                .map_err(|e| ImageError::CouldNotGetData(e))?
+                .to_vec();
+            Ok(data
+                .chunks_exact(4)
+                .flat_map(|arr| [arr[2], arr[1], arr[0]])
+                .collect())
         }
     }
 }

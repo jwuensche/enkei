@@ -24,8 +24,12 @@ pub enum MetadataError {
 
 impl MetadataReader {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Metadata, MetadataError> {
-        let config_file = OpenOptions::new().read(true).open(path).map_err(|e| MetadataError::CouldNotOpen(format!("{}", e)))?;
-        let config: Background = serde_xml_rs::from_reader(config_file).map_err(|e| MetadataError::CouldNotParse(format!("{}", e)))?;
+        let config_file = OpenOptions::new()
+            .read(true)
+            .open(path)
+            .map_err(|e| MetadataError::CouldNotOpen(format!("{}", e)))?;
+        let config: Background = serde_xml_rs::from_reader(config_file)
+            .map_err(|e| MetadataError::CouldNotParse(format!("{}", e)))?;
         // Sanity Checks and Transition
         let mut transitions = vec![];
         let start_time = {
@@ -36,7 +40,10 @@ impl MetadataReader {
                 hour,
                 minute,
                 second,
-            } = config.images.get(0).ok_or_else(|| MetadataError::InvalidTimeFormat)?
+            } = config
+                .images
+                .get(0)
+                .ok_or_else(|| MetadataError::InvalidTimeFormat)?
             {
                 NaiveDate::from_ymd(*year as i32, *month, *day).and_hms(*hour, *minute, *second)
             } else {

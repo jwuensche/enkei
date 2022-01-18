@@ -1,25 +1,19 @@
 use super::outputs::Output;
 use image::DynamicImage;
 use khronos_egl::{
-    Display as eglDisplay,
-    Context as eglContext,
-    Surface as eglSurface,
-    Config as eglConfig,
+    Config as eglConfig, Context as eglContext, Display as eglDisplay, Surface as eglSurface,
 };
 use wayland_egl::WlEglSurface;
 
 use super::opengl::context::Context as glContext;
 
-use wayland_client::{
-    protocol::{wl_surface::WlSurface, wl_compositor::WlCompositor}, EventQueue,
-    Main,
-};
 use super::egl;
-
-use std::sync::{
-    Arc,
-    RwLock,
+use wayland_client::{
+    protocol::{wl_compositor::WlCompositor, wl_surface::WlSurface},
+    EventQueue, Main,
 };
+
+use std::sync::{Arc, RwLock};
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,
@@ -54,8 +48,12 @@ impl OutputRendering {
         surface.commit();
         let lock = output.read().unwrap();
         let output_id = lock.id();
-        let background =
-            layers.get_layer_surface(&surface, Some(lock.inner()), Layer::Background, "wallpaper".into());
+        let background = layers.get_layer_surface(
+            &surface,
+            Some(lock.inner()),
+            Layer::Background,
+            "wallpaper".into(),
+        );
         background.set_layer(Layer::Background);
         background.set_anchor(Anchor::all());
         surface.commit();
@@ -77,8 +75,22 @@ impl OutputRendering {
 
         let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, buf_x as i32, buf_y as i32);
         let (egl_context, egl_config) = create_context(egl_display);
-        let egl_surface = unsafe { egl.create_window_surface(egl_display, egl_config, wl_egl_surface.ptr() as egl::NativeWindowType, None).unwrap() };
-        egl.make_current(egl_display, Some(egl_surface), Some(egl_surface), Some(egl_context)).unwrap();
+        let egl_surface = unsafe {
+            egl.create_window_surface(
+                egl_display,
+                egl_config,
+                wl_egl_surface.ptr() as egl::NativeWindowType,
+                None,
+            )
+            .unwrap()
+        };
+        egl.make_current(
+            egl_display,
+            Some(egl_surface),
+            Some(egl_surface),
+            Some(egl_context),
+        )
+        .unwrap();
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
         let context = super::opengl::context::Context::new(buf_x as i32, buf_y as i32);
@@ -115,7 +127,13 @@ impl OutputRendering {
     }
 
     pub fn set_from<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
-        egl.make_current(self.egl_display, Some(self.egl_surface), Some(self.egl_surface), Some(self.egl_context)).unwrap();
+        egl.make_current(
+            self.egl_display,
+            Some(self.egl_surface),
+            Some(self.egl_surface),
+            Some(self.egl_context),
+        )
+        .unwrap();
         self.gl_context.set_from(image, width.into(), height.into())
     }
 
@@ -124,40 +142,49 @@ impl OutputRendering {
     }
 
     pub fn draw(&self, process: f32) {
-        egl.make_current(self.egl_display, Some(self.egl_surface), Some(self.egl_surface), Some(self.egl_context)).unwrap();
+        egl.make_current(
+            self.egl_display,
+            Some(self.egl_surface),
+            Some(self.egl_surface),
+            Some(self.egl_context),
+        )
+        .unwrap();
         self.gl_context.draw(process);
-        egl.swap_buffers(self.egl_display, self.egl_surface).unwrap();
+        egl.swap_buffers(self.egl_display, self.egl_surface)
+            .unwrap();
         self.surface.commit();
     }
 }
 
 fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
-        let attributes = [
-                egl::RED_SIZE,
-                8,
-                egl::GREEN_SIZE,
-                8,
-                egl::BLUE_SIZE,
-                8,
-                egl::NONE,
-        ];
+    let attributes = [
+        egl::RED_SIZE,
+        8,
+        egl::GREEN_SIZE,
+        8,
+        egl::BLUE_SIZE,
+        8,
+        egl::NONE,
+    ];
 
-        let config = egl.choose_first_config(display, &attributes)
-                .expect("unable to choose an EGL configuration")
-                .expect("no EGL configuration found");
+    let config = egl
+        .choose_first_config(display, &attributes)
+        .expect("unable to choose an EGL configuration")
+        .expect("no EGL configuration found");
 
-        let context_attributes = [
-                egl::CONTEXT_MAJOR_VERSION,
-                4,
-                egl::CONTEXT_MINOR_VERSION,
-                0,
-                egl::CONTEXT_OPENGL_PROFILE_MASK,
-                egl::CONTEXT_OPENGL_CORE_PROFILE_BIT,
-                egl::NONE,
-        ];
+    let context_attributes = [
+        egl::CONTEXT_MAJOR_VERSION,
+        4,
+        egl::CONTEXT_MINOR_VERSION,
+        0,
+        egl::CONTEXT_OPENGL_PROFILE_MASK,
+        egl::CONTEXT_OPENGL_CORE_PROFILE_BIT,
+        egl::NONE,
+    ];
 
-        let context = egl.create_context(display, config, None, &context_attributes)
-                .expect("unable to create an EGL context");
+    let context = egl
+        .create_context(display, config, None, &context_attributes)
+        .expect("unable to create an EGL context");
 
-        (context, config)
+    (context, config)
 }

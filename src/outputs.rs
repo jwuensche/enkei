@@ -1,13 +1,11 @@
-use std::sync::mpsc::{Receiver, channel, Sender};
-use std::sync::{Arc, RwLock, RwLockReadGuard};
 use getset::Getters;
 use serde::__private::de::FlatInternallyTaggedAccess;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 use thiserror::Error;
 
-use wayland_client::protocol::wl_output::{Subpixel, Transform, Mode as ModeFlag, WlOutput};
-use wayland_client::protocol::{
-    wl_output,
-};
+use wayland_client::protocol::wl_output;
+use wayland_client::protocol::wl_output::{Mode as ModeFlag, Subpixel, Transform, WlOutput};
 use wayland_client::Main;
 
 #[derive(Error, Debug)]
@@ -93,9 +91,23 @@ impl Output {
     }
 }
 
-pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event, added: &Sender<WorkerMessage>, id: u32) {
+pub fn handle_output_events(
+    pass: &Arc<RwLock<Output>>,
+    event: wl_output::Event,
+    added: &Sender<WorkerMessage>,
+    id: u32,
+) {
     match event {
-        wl_output::Event::Geometry { x, y, physical_width, physical_height, subpixel, make, model, transform } => {
+        wl_output::Event::Geometry {
+            x,
+            y,
+            physical_width,
+            physical_height,
+            subpixel,
+            make,
+            model,
+            transform,
+        } => {
             let mut lock = pass.write().expect("Could not lock output object");
             lock.geometry = Some(Geometry {
                 x,
@@ -107,23 +119,31 @@ pub fn handle_output_events(pass: &Arc<RwLock<Output>>, event: wl_output::Event,
                 model,
                 transform,
             });
-        },
-        wl_output::Event::Mode { flags, width, height, refresh } => {
+        }
+        wl_output::Event::Mode {
+            flags,
+            width,
+            height,
+            refresh,
+        } => {
             let mut lock = pass.write().expect("Could not lock output object");
-            lock.mode = Some(Mode{
+            lock.mode = Some(Mode {
                 flags,
                 width,
                 height,
-                refresh
+                refresh,
             });
-        },
+        }
         wl_output::Event::Scale { factor } => {
             let mut lock = pass.write().expect("Could not lock output object");
             lock.scale = factor;
-        },
-        wl_output::Event::Done => added.send(
-            WorkerMessage::AddOutput(SendWrapper::new(Arc::clone(&pass)), id)
-        ).unwrap(),
+        }
+        wl_output::Event::Done => added
+            .send(WorkerMessage::AddOutput(
+                SendWrapper::new(Arc::clone(&pass)),
+                id,
+            ))
+            .unwrap(),
         _ => unreachable!(),
     }
 }

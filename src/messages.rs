@@ -1,10 +1,7 @@
-use super::outputs::Output;
 use super::metadata::Transition;
-use std::sync::{
-    Arc,
-    RwLock,
-};
+use super::outputs::Output;
 use send_wrapper::SendWrapper;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
 pub enum WorkerMessage {

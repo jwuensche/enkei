@@ -4,8 +4,8 @@ use image::error::ParameterError;
 use image::error::UnsupportedError;
 use thiserror::Error;
 
-use cairo::Error as CairoError;
 use cairo::BorrowError as CairoBorrowError;
+use cairo::Error as CairoError;
 
 #[derive(Error, Debug)]
 pub enum ImageError {
@@ -38,7 +38,9 @@ impl From<image::error::ImageError> for ImageError {
             image::ImageError::Limits(e) => ImageError::ResourceLimit(e),
             image::ImageError::Unsupported(e) => ImageError::Unsupported(e),
             image::ImageError::IoError(e) => ImageError::Io(e),
-            image::ImageError::Parameter(e) => ImageError::Generic(format!("Loading of image failed: {}", e)),
+            image::ImageError::Parameter(e) => {
+                ImageError::Generic(format!("Loading of image failed: {}", e))
+            }
             image::ImageError::Encoding(_) => unimplemented!(),
         }
     }
