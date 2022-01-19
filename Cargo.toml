@@ -10,6 +10,7 @@ description = "An OpenGL accelerated wallpaper tool with support for the Gnome D
 cairo-rs = "0.14.9"
 chrono = "0.4.19"
 clap = { version = "3.0.7", features = ["derive"] }
+env_logger = "0.9.0"
 ezing = "0.2.1"
 getset = "0.1.2"
 gl = "0.14.0"

@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::messages::WorkerMessage;
 use std::sync::mpsc::Sender;
 
@@ -9,6 +11,7 @@ pub fn spawn_animation_ticker(
     mut finished: u64,
     tx: Sender<WorkerMessage>,
 ) {
+    debug!("Spawning Ticker {{ step_duration: {}s, count: {}, offset: {} }}", step_duration.as_secs_f32(), count, finished);
     tx.send(WorkerMessage::AnimationStep(finished as f32 / count as f32))
         .expect(ERROR_MSG);
     std::thread::spawn(move || loop {
@@ -27,6 +30,7 @@ pub fn spawn_simple_timer(
     tx: Sender<WorkerMessage>,
     msg: WorkerMessage,
 ) {
+    debug!("Spawning Simple Timer {{ duration: {}s, msg: {:?} }}", duration.as_secs_f32(), msg);
     std::thread::spawn(move || {
         std::thread::sleep(duration);
         tx.send(msg).expect(ERROR_MSG);

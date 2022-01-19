@@ -1,3 +1,4 @@
+use log::debug;
 use metadata::MetadataError;
 use wayland_client::{
     global_filter, protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main,
@@ -143,7 +144,7 @@ use crate::metadata::{Metadata, MetadataReader};
 
 fn main() -> Result<(), ApplicationError> {
     let args = Args::parse();
-
+    env_logger::init();
     /*
      * Setup display initials for wayland
      */
@@ -160,14 +161,13 @@ fn main() -> Result<(), ApplicationError> {
     let globals = GlobalManager::new_with_cb(
         &attached_display,
         move |event: GlobalEvent, data: Attached<WlRegistry>, _| {
-            dbg!(&event);
             match event {
                 GlobalEvent::New {
                     id,
                     interface,
                     version,
                 } if interface == "wl_output" => {
-                    println!("Got a new WlOutput instance!");
+                    debug!("Registering WlOutput Interface {{ id: {}, version: {} }}", id, version);
                     let output: Main<wl_output::WlOutput> = data.bind(version, id);
                     let new_output = Arc::new(RwLock::new(Output::new(output.clone(), id)));
                     let pass = Arc::clone(&new_output);
@@ -180,7 +180,7 @@ fn main() -> Result<(), ApplicationError> {
                     drop(lock);
                 }
                 GlobalEvent::Removed { id, interface } if interface == "wl_output" => {
-                    println!("Removed a WlOutput instance!");
+                    debug!("Removing WlOutput Interface {{ id: {} }}", id);
                     let mut lock = pass_outputs.write().unwrap();
                     let mut pos = lock.iter().enumerate().filter_map(|elem| {
                         let out = elem.1.read().unwrap();
@@ -191,7 +191,7 @@ fn main() -> Result<(), ApplicationError> {
                         }
                     });
                     if let Some(valid) = pos.next() {
-                        let data = lock.swap_remove(valid);
+                        let _data = lock.swap_remove(valid);
                         tx.send(messages::WorkerMessage::RemoveOutput(id)).unwrap();
                     }
                 }
@@ -200,16 +200,6 @@ fn main() -> Result<(), ApplicationError> {
         },
     );
 
-    // let globals = GlobalManager::new_with_cb(
-    //     &attached_display,
-    //     // Let's use the global filter macro provided with the wayland-client crate here
-    //     // The advantage of this that we will get all initially advertised objects (like WlOutput) as a freebe here and don't have to concern with getting
-    //     // all available ones later.
-    //     global_filter!(
-    //         [wl_output::WlOutput, 2, move |output: Main<wl_output::WlOutput>, _: DispatchData| {
-    //         }]
-    //     )
-    // );
     event_queue
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
         .unwrap();

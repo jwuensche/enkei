@@ -3,6 +3,7 @@ use std::sync::mpsc::{Receiver, Sender};
 
 use std::sync::{Arc, RwLock};
 
+use log::debug;
 use wayland_client::{Display, EventQueue, GlobalManager};
 
 use wayland_client::protocol::wl_compositor;
@@ -60,13 +61,13 @@ pub fn work(
                 unreachable!();
             })
             .unwrap();
-        println!("Processed messages");
+        debug!("Processed wayland messages");
 
         if let Ok(msg) = messages.try_recv() {
             // do something with new found messages
             match msg {
                 messages::WorkerMessage::AddOutput(output, id) => {
-                    println!("Message: AddOutput");
+                    debug!("Message: AddOutput {{ id: {} }}", id);
 
                     if renders
                         .iter()
@@ -74,18 +75,15 @@ pub fn work(
                         .count()
                         > 0
                     {
-                        println!("Display updated and not new.");
+                        debug!("Display updated and not new.");
                     } else {
                         let lock = output.read().unwrap();
                         if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
-                            println!("Found output {} {}:", geo.make(), geo.model());
-                            println!("      Resolution: {}x{}", mode.width(), mode.height());
-                            println!("      Position: {}x{}", geo.x(), geo.y());
+                            debug!("Rendering on output {{ make: {}, model: {}, resolution: {}x{}, position: {}x{} }}", geo.make(), geo.model(), mode.width(), mode.height(), geo.x(), geo.y());
                         }
                         let width = *lock.mode().unwrap().width();
                         let height = *lock.mode().unwrap().height();
                         drop(lock);
-                        println!("Starting window on monitor..");
                         renders.push(OutputRendering::new(
                             &compositor,
                             &layers,
@@ -109,7 +107,7 @@ pub fn work(
                     }
                 }
                 messages::WorkerMessage::RemoveOutput(id) => {
-                    println!("Message: RemoveOutput");
+                    debug!("Message: RemoveOutput {{ id: {} }}", id);
                     let mut res = renders.iter().enumerate().filter_map(|elem| {
                         let lock = elem.1.output.read().unwrap();
                         if lock.id() == id {
@@ -120,19 +118,17 @@ pub fn work(
                     });
 
                     if let Some(valid) = res.next() {
-                        println!("Removing Output");
-                        dbg!(&renders);
+                        debug!("Removing WlOuput Renderer {{ id: {} }}", renders[valid].output_id());
                         renders.swap_remove(valid);
-                        dbg!(&renders);
                     }
                 }
                 messages::WorkerMessage::AnimationStep(process) => {
-                    println!("Message: AnimationStep");
+                    debug!("Message: AnimationStep {{ process: {} }}", process);
                     for output in renders.iter() {
-                        println!("Drawing output: {:?}", output);
+                        debug!("Drawing on WlOutput {{ id: {} }}", output.output_id());
                         output.draw(ezing::quad_inout(process));
                     }
-                    println!("Finished animation drawing");
+                    debug!("Finished animation drawing");
                     if process >= 1.0 {
                         senders
                             .send(WorkerMessage::Refresh)
@@ -140,13 +136,8 @@ pub fn work(
                     }
                 }
                 messages::WorkerMessage::AnimationStart(duration) => {
-                    println!("Message: AnimationStart");
+                    debug!("Message: AnimationStart {{ duration: {}s }}", duration);
                     let count = (duration * FPS).clamp(1.0, 600.0);
-                    println!(
-                        "Spawn Ticker (step duration: {}s, count: {})",
-                        duration / count,
-                        count as u64
-                    );
                     timer::spawn_animation_ticker(
                         std::time::Duration::from_secs_f64(duration / count),
                         count as u64,
@@ -155,8 +146,8 @@ pub fn work(
                     );
                 }
                 messages::WorkerMessage::Refresh => {
+                    debug!("Message: Refresh");
                     ticker_active = false;
-                    println!("Message: Refresh");
                     let state = metadata.current()?;
                     for output in renders.iter_mut() {
                         refresh_output(
@@ -173,7 +164,7 @@ pub fn work(
                 }
             }
         } else {
-            println!("Got no message, waiting...");
+            debug!("Got no message, waiting...");
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
     }
@@ -188,11 +179,6 @@ fn state_draw(
     match state {
         State::Static(progress, transition) => {
             if transition.is_animated() && !*ticker_active {
-                println!(
-                    "Spawn Simple Timer(duration: {}s, transition: {}s)",
-                    transition.duration_static() - progress,
-                    transition.duration_transition()
-                );
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,
@@ -200,10 +186,6 @@ fn state_draw(
                 );
                 *ticker_active = true;
             } else if !*ticker_active {
-                println!(
-                    "Spawn Simple Timer(duration: {}s)",
-                    transition.duration_static() - progress
-                );
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,

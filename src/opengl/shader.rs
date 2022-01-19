@@ -1,4 +1,5 @@
 use gl::types::{GLenum, GLint};
+use log::error;
 
 use super::error::check_error;
 
@@ -55,7 +56,7 @@ impl Shader {
         let mut status = 0i32;
         gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
         if status != gl::TRUE.into() {
-            eprintln!("Shader did not compile.");
+            error!("Shader did not compile.");
             std::process::exit(1);
         }
         check_error("Shader Creation");

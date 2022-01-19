@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use log::debug;
+
 use crate::image::{
     error::ImageError,
     image::Image,
@@ -26,12 +28,13 @@ impl ResourceLoader {
         // workaround as this introduces nastier non-lexical lifetimes
         if self.loaded.contains_key(path) {
             // The scaling and filter cannot differ
-            println!("Used the stored data!");
+            debug!("Fetching image from cache {{ path: {} }}", path);
             return Ok(self.loaded.get(path).unwrap());
         }
 
         let surface = Image::new(path, scaling, filter)?;
         self.loaded.insert(path.to_string(), surface);
+        debug!("Caching image {{ path: {} }}", path);
         return Ok(self
             .loaded
             .get_mut(path)
