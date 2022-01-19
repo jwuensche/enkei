@@ -140,7 +140,7 @@ pub fn handle_output_events(
         }
         wl_output::Event::Done => added
             .send(WorkerMessage::AddOutput(
-                SendWrapper::new(Arc::clone(&pass)),
+                SendWrapper::new(Arc::clone(pass)),
                 id,
             ))
             .unwrap(),

@@ -57,16 +57,16 @@ impl OutputRendering {
         background.set_layer(Layer::Background);
         background.set_anchor(Anchor::all());
         surface.commit();
-        background.quick_assign(|layer, event, _| match event {
-            LayerEvent::Configure {
+        background.quick_assign(|layer, event, _| {
+            if let LayerEvent::Configure {
                 serial,
                 width,
                 height,
-            } => {
+            } = event
+            {
                 // Ignore the resolution received while registering, we know on which output we are.
                 layer.ack_configure(serial);
             }
-            _ => {}
         });
         surface.commit();
         event_queue

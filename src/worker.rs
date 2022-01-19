@@ -195,7 +195,7 @@ fn state_draw(
                 );
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
-                    senders.clone(),
+                    senders,
                     WorkerMessage::AnimationStart(transition.duration_transition()),
                 );
                 *ticker_active = true;
@@ -206,7 +206,7 @@ fn state_draw(
                 );
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
-                    senders.clone(),
+                    senders,
                     WorkerMessage::Refresh,
                 );
                 *ticker_active = true;
@@ -223,7 +223,7 @@ fn state_draw(
                     std::time::Duration::from_secs_f64(step),
                     count as u64,
                     finished as u64,
-                    senders.clone(),
+                    senders,
                 );
                 *ticker_active = true;
             }

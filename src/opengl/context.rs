@@ -149,32 +149,31 @@ impl Context {
             let to_location = gl::GetUniformLocation(program.id, name.as_ptr());
             gl::Uniform1i(to_location, 1);
         }
-        let obj = Self {
+        Self {
             vao,
-            vbo,
             ebo,
+            vbo,
             tex_from,
             tex_to,
             shader_program: program,
-        };
-        obj
+        }
     }
 
-    pub fn set_from(&self, pic: &Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_from(&self, pic: &[u8], width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.set_image(pic, width, height, self.tex_from)
         }
     }
 
-    pub fn set_to(&self, pic: &Vec<u8>, width: i32, height: i32) -> () {
+    pub fn set_to(&self, pic: &[u8], width: i32, height: i32) -> () {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE1);
             self.set_image(pic, width, height, self.tex_to)
         }
     }
 
-    unsafe fn set_image(&self, pic: &Vec<u8>, width: i32, height: i32, tex_id: u32) -> () {
+    unsafe fn set_image(&self, pic: &[u8], width: i32, height: i32, tex_id: u32) -> () {
         gl::BindTexture(gl::TEXTURE_2D, tex_id);
         gl::TexImage2D(
             gl::TEXTURE_2D,

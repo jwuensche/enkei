@@ -19,7 +19,7 @@ impl ResourceLoader {
 
     pub fn load(
         &mut self,
-        path: &String,
+        path: &str,
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Image, ImageError> {
@@ -31,7 +31,7 @@ impl ResourceLoader {
         }
 
         let surface = Image::new(path, scaling, filter)?;
-        self.loaded.insert(path.clone(), surface);
+        self.loaded.insert(path.to_string(), surface);
         return Ok(self
             .loaded
             .get_mut(path)
