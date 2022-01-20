@@ -61,9 +61,8 @@ pub fn work(
                 unreachable!();
             })
             .unwrap();
-        debug!("Processed wayland messages");
 
-        if let Ok(msg) = messages.try_recv() {
+        if let Ok(msg) = messages.recv_timeout(std::time::Duration::from_millis(500)) {
             // do something with new found messages
             match msg {
                 messages::WorkerMessage::AddOutput(output, id) => {
@@ -128,7 +127,6 @@ pub fn work(
                         debug!("Drawing on WlOutput {{ id: {} }}", output.output_id());
                         output.draw(ezing::quad_inout(process));
                     }
-                    debug!("Finished animation drawing");
                     if process >= 1.0 {
                         senders
                             .send(WorkerMessage::Refresh)
@@ -147,6 +145,7 @@ pub fn work(
                 }
                 messages::WorkerMessage::Refresh => {
                     debug!("Message: Refresh");
+                    let start = std::time::Instant::now();
                     ticker_active = false;
                     let state = metadata.current()?;
                     for output in renders.iter_mut() {
@@ -160,12 +159,10 @@ pub fn work(
                         .expect("Could not refresh");
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
+                    debug!("Refreshing of all outputs took {}ms", start.elapsed().as_millis());
                     // Cancel all running timer watchdogs
                 }
             }
-        } else {
-            debug!("Got no message, waiting...");
-            std::thread::sleep(std::time::Duration::from_millis(500));
         }
     }
 }
@@ -240,21 +237,20 @@ fn refresh_output(
         }
     }
 
-    let mut from = resources
-        .load(transition.from(), scaling, filter)
-        .unwrap()
-        .process(&mode)
+    // TODO: Handle errors here
+    let from = resources
+        .load(transition.from(), &mode, scaling, filter)
         .expect("Could not get Image data");
-    output.set_from(&mut from, width, height);
+    let start = std::time::Instant::now();
+    output.set_from(from, width, height);
+    debug!("Sending of image texture to shader took {}ms", start.elapsed().as_millis());
     if transition.is_animated() {
-        let mut to = resources
-            .load(transition.to().unwrap(), scaling, filter)
-            .unwrap()
-            .process(&mode)
+        let to = resources
+            .load(transition.to().unwrap(), &mode, scaling, filter)
             .expect("Could not get Image data");
-        output.set_to(&mut to, width, height);
+        output.set_to(to, width, height);
     } else {
-        output.set_to(&mut from, width, height);
+        output.set_to(from, width, height);
     }
     Ok(())
 }

@@ -26,7 +26,7 @@ pub struct Output {
     id: u32,
 }
 
-#[derive(Getters, Debug, Clone)]
+#[derive(Getters, Debug, Clone, Hash, PartialEq, Eq, Copy)]
 pub struct Mode {
     #[get = "pub"]
     flags: ModeFlag,

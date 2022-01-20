@@ -1,7 +1,8 @@
 use super::{error::ImageError, scaling::Filter, scaling::Scaling};
 use crate::outputs::Mode;
 use cairo::ImageSurface;
-use image::{GenericImageView, Pixel};
+use image::GenericImageView;
+use log::debug;
 
 pub struct Image {
     inner: ImageSurface,
@@ -43,6 +44,9 @@ impl Image {
     }
 
     pub fn process(&self, mode: &Mode) -> Result<Vec<u8>, ImageError> {
-        self.scaling.scale(&self.inner, mode, self.filter)
+        let start = std::time::Instant::now();
+        let res = self.scaling.scale(&self.inner, mode, self.filter);
+        debug!("Scaling of image took {}ms", start.elapsed().as_millis());
+        res
     }
 }

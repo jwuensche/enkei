@@ -1,3 +1,6 @@
+use crate::{util::ResourceLoader, image::scaling::{Scaling, Filter}, outputs::Mode};
+use crate::image::error::ImageError;
+
 use super::outputs::Output;
 use image::DynamicImage;
 use khronos_egl::{
@@ -13,7 +16,7 @@ use wayland_client::{
     EventQueue, Main,
 };
 
-use std::sync::{Arc, RwLock};
+use std::{sync::{Arc, RwLock}, collections::HashMap};
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,
@@ -26,6 +29,7 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
 pub struct OutputRendering {
     pub output: Arc<RwLock<Output>>,
     output_id: u32,
+    scaled: HashMap<String, Vec<u8>>,
     surface: Main<WlSurface>,
     egl_context: eglContext,
     egl_display: eglDisplay,
@@ -113,6 +117,7 @@ impl OutputRendering {
         OutputRendering {
             output,
             output_id,
+            scaled: HashMap::new(),
             surface,
             egl_context,
             wl_egl_surface,
@@ -122,11 +127,11 @@ impl OutputRendering {
         }
     }
 
-    pub fn set_to<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
+    pub fn set_to<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) {
         self.gl_context.set_to(image, width.into(), height.into())
     }
 
-    pub fn set_from<I: Into<i32>>(&mut self, image: &mut Vec<u8>, width: I, height: I) {
+    pub fn set_from<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
