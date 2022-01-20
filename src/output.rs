@@ -12,7 +12,7 @@ use super::opengl::context::Context as glContext;
 
 use super::egl;
 use wayland_client::{
-    protocol::{wl_compositor::WlCompositor, wl_surface::WlSurface},
+    protocol::{wl_compositor::WlCompositor, wl_surface::WlSurface, wl_display},
     EventQueue, Main,
 };
 
@@ -95,6 +95,7 @@ impl OutputRendering {
             Some(egl_context),
         )
         .unwrap();
+        egl.swap_interval(egl_display, 0).unwrap();
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
         let context = super::opengl::context::Context::new(buf_x as i32, buf_y as i32);
