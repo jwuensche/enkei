@@ -214,4 +214,16 @@ impl Context {
             check_error("Drawing");
         }
     }
+
+    pub fn destroy(&self) {
+        debug!("Destroying OpenGL Context");
+        unsafe {
+            gl::DeleteProgram(self.shader_program.id);
+            gl::DeleteShader(self.shader_program.fragment_shader.id());
+            gl::DeleteShader(self.shader_program.vertex_shader.id());
+            gl::DeleteBuffers(1, self.vbo as *const u32);
+            gl::DeleteBuffers(1, self.ebo as *const u32);
+            gl::DeleteVertexArrays(1, self.vao as *const u32);
+        }
+    }
 }

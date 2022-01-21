@@ -58,7 +58,7 @@ pub fn work(
     loop {
         event_queue
             .sync_roundtrip(&mut (), |_, event, _| {
-                unreachable!();
+                // NO-OP
             })
             .unwrap();
 
@@ -118,6 +118,7 @@ pub fn work(
 
                     if let Some(valid) = res.next() {
                         debug!("Removing WlOuput Renderer {{ id: {} }}", renders[valid].output_id());
+                        renders[valid].destroy();
                         renders.swap_remove(valid);
                     }
                 }

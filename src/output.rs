@@ -160,6 +160,13 @@ impl OutputRendering {
             .unwrap();
         self.surface.commit();
     }
+
+    pub fn destroy(&self) {
+        self.surface.destroy();
+        egl.destroy_surface(self.egl_display, self.egl_surface).expect("EGL surface could not be destroyed");
+        egl.destroy_context(self.egl_display, self.egl_context).expect("EGL context could not be destroyed");
+        // self.gl_context.destroy();
+    }
 }
 
 fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
