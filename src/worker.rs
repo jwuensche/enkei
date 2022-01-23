@@ -117,7 +117,10 @@ pub fn work(
                     });
 
                     if let Some(valid) = res.next() {
-                        debug!("Removing WlOuput Renderer {{ id: {} }}", renders[valid].output_id());
+                        debug!(
+                            "Removing WlOuput Renderer {{ id: {} }}",
+                            renders[valid].output_id()
+                        );
                         renders[valid].destroy();
                         renders.swap_remove(valid);
                     }
@@ -160,7 +163,10 @@ pub fn work(
                         .expect("Could not refresh");
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
-                    debug!("Refreshing of all outputs took {}ms", start.elapsed().as_millis());
+                    debug!(
+                        "Refreshing of all outputs took {}ms",
+                        start.elapsed().as_millis()
+                    );
                     // Cancel all running timer watchdogs
                 }
             }
@@ -244,7 +250,10 @@ fn refresh_output(
         .expect("Could not get Image data");
     let start = std::time::Instant::now();
     output.set_from(from, width, height);
-    debug!("Sending of image texture to shader took {}ms", start.elapsed().as_millis());
+    debug!(
+        "Sending of image texture to shader took {}ms",
+        start.elapsed().as_millis()
+    );
     if transition.is_animated() {
         let to = resources
             .load(transition.to().unwrap(), &mode, scaling, filter)

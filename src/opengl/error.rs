@@ -1,6 +1,5 @@
 use log::error;
 
-
 pub unsafe fn check_error(pos: &str) {
     let err = gl::GetError();
     if err != 0 {

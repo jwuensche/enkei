@@ -1,6 +1,14 @@
-use std::{error::Error, sync::{RwLock, Arc}, fmt::{Display, Write}};
+use std::{
+    error::Error,
+    fmt::{Display, Write},
+    sync::{Arc, RwLock},
+};
 
-use crate::{metadata::{Metadata, MetadataError}, outputs::Output, ApplicationError};
+use crate::{
+    metadata::{Metadata, MetadataError},
+    outputs::Output,
+    ApplicationError,
+};
 
 // This module serves to display a reportable error if any error occur during execution.
 // It is inspired by `human_panic` which is quite nice to deal with panics.
@@ -21,12 +29,8 @@ impl ErrorReport {
         Self {
             error,
             metadata: None,
-            outputs: None
+            outputs: None,
         }
-    }
-
-    pub fn set_metadata(&mut self, meta: Metadata) {
-        self.metadata = Some(meta);
     }
 
     pub fn with_metadata(mut self, meta: Metadata) -> Self {

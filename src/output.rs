@@ -1,5 +1,9 @@
-use crate::{util::ResourceLoader, image::scaling::{Scaling, Filter}, outputs::Mode};
 use crate::image::error::ImageError;
+use crate::{
+    image::scaling::{Filter, Scaling},
+    outputs::Mode,
+    util::ResourceLoader,
+};
 
 use super::outputs::Output;
 use image::DynamicImage;
@@ -12,11 +16,14 @@ use super::opengl::context::Context as glContext;
 
 use super::egl;
 use wayland_client::{
-    protocol::{wl_compositor::WlCompositor, wl_surface::WlSurface, wl_display},
+    protocol::{wl_compositor::WlCompositor, wl_display, wl_surface::WlSurface},
     EventQueue, Main,
 };
 
-use std::{sync::{Arc, RwLock}, collections::HashMap};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,
@@ -163,8 +170,10 @@ impl OutputRendering {
 
     pub fn destroy(&self) {
         self.surface.destroy();
-        egl.destroy_surface(self.egl_display, self.egl_surface).expect("EGL surface could not be destroyed");
-        egl.destroy_context(self.egl_display, self.egl_context).expect("EGL context could not be destroyed");
+        egl.destroy_surface(self.egl_display, self.egl_surface)
+            .expect("EGL surface could not be destroyed");
+        egl.destroy_context(self.egl_display, self.egl_context)
+            .expect("EGL context could not be destroyed");
         // self.gl_context.destroy();
     }
 }

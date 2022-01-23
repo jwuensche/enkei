@@ -6,8 +6,9 @@ use wayland_client::{
 };
 
 use std::{
+    io::Read,
     os::unix::prelude::MetadataExt,
-    sync::{mpsc::channel, Arc, RwLock}, io::Read,
+    sync::{mpsc::channel, Arc, RwLock},
 };
 
 use wayland_client::{
@@ -18,6 +19,7 @@ use wayland_client::{
 use clap::ArgEnum;
 use lazy_regex::regex_is_match;
 
+mod error_report;
 mod image;
 mod messages;
 mod metadata;
@@ -28,7 +30,6 @@ mod schema;
 mod util;
 mod watchdog;
 mod worker;
-mod error_report;
 
 use crate::image::error::ImageError;
 
@@ -162,43 +163,44 @@ fn main() {
 
     let globals = GlobalManager::new_with_cb(
         &attached_display,
-        move |event: GlobalEvent, data: Attached<WlRegistry>, _| {
-            match event {
-                GlobalEvent::New {
-                    id,
-                    interface,
-                    version,
-                } if interface == "wl_output" => {
-                    debug!("Registering WlOutput Interface {{ id: {}, version: {} }}", id, version);
-                    let output: Main<wl_output::WlOutput> = data.bind(version, id);
-                    let new_output = Arc::new(RwLock::new(Output::new(output.clone(), id)));
-                    let pass = Arc::clone(&new_output);
-                    let added = tx.clone();
-                    output.quick_assign(move |_, event, _| {
-                        handle_output_events(&pass, event, &added, id);
-                    });
-                    let mut lock = pass_outputs.write().unwrap();
-                    lock.push(new_output);
-                    drop(lock);
-                }
-                GlobalEvent::Removed { id, interface } if interface == "wl_output" => {
-                    debug!("Removing WlOutput Interface {{ id: {} }}", id);
-                    let mut lock = pass_outputs.write().unwrap();
-                    let mut pos = lock.iter().enumerate().filter_map(|elem| {
-                        let out = elem.1.read().unwrap();
-                        if out.id() == id {
-                            Some(elem.0)
-                        } else {
-                            None
-                        }
-                    });
-                    if let Some(valid) = pos.next() {
-                        let _data = lock.swap_remove(valid);
-                        tx.send(messages::WorkerMessage::RemoveOutput(id)).unwrap();
-                    }
-                }
-                _ => {}
+        move |event: GlobalEvent, data: Attached<WlRegistry>, _| match event {
+            GlobalEvent::New {
+                id,
+                interface,
+                version,
+            } if interface == "wl_output" => {
+                debug!(
+                    "Registering WlOutput Interface {{ id: {}, version: {} }}",
+                    id, version
+                );
+                let output: Main<wl_output::WlOutput> = data.bind(version, id);
+                let new_output = Arc::new(RwLock::new(Output::new(output.clone(), id)));
+                let pass = Arc::clone(&new_output);
+                let added = tx.clone();
+                output.quick_assign(move |_, event, _| {
+                    handle_output_events(&pass, event, &added, id);
+                });
+                let mut lock = pass_outputs.write().unwrap();
+                lock.push(new_output);
+                drop(lock);
             }
+            GlobalEvent::Removed { id, interface } if interface == "wl_output" => {
+                debug!("Removing WlOutput Interface {{ id: {} }}", id);
+                let mut lock = pass_outputs.write().unwrap();
+                let mut pos = lock.iter().enumerate().filter_map(|elem| {
+                    let out = elem.1.read().unwrap();
+                    if out.id() == id {
+                        Some(elem.0)
+                    } else {
+                        None
+                    }
+                });
+                if let Some(valid) = pos.next() {
+                    let _data = lock.swap_remove(valid);
+                    tx.send(messages::WorkerMessage::RemoveOutput(id)).unwrap();
+                }
+            }
+            _ => {}
         },
     );
 

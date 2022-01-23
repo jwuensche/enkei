@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::outputs::Mode;
+use std::collections::HashMap;
 
 use log::debug;
 
@@ -32,7 +32,10 @@ impl ResourceLoader {
         // workaround as this introduces nastier non-lexical lifetimes
         if self.scaled.contains_key(&(path.to_string(), *mode)) {
             // The scaling and filter cannot differ
-            debug!("Fetching scaled image from cache {{ path: {}, mode: {:?} }}", path, mode);
+            debug!(
+                "Fetching scaled image from cache {{ path: {}, mode: {:?} }}",
+                path, mode
+            );
             return Ok(self.scaled.get(&(path.to_string(), *mode)).unwrap());
         }
 
@@ -44,7 +47,8 @@ impl ResourceLoader {
 
         let surface = self.loaded.get(path).expect("Cannot fail");
         let surface_scaled = surface.process(mode)?;
-        self.scaled.insert((path.to_string(), *mode), surface_scaled);
+        self.scaled
+            .insert((path.to_string(), *mode), surface_scaled);
         return Ok(self
             .scaled
             .get(&(path.to_string(), *mode))
