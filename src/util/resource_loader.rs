@@ -5,8 +5,8 @@ use log::debug;
 
 use crate::image::{
     error::ImageError,
-    image::Image,
     scaling::{Filter, Scaling},
+    Image,
 };
 
 pub struct ResourceLoader {

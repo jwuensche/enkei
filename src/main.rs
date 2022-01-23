@@ -1,20 +1,11 @@
 use error_report::ErrorReport;
 use log::debug;
 use metadata::MetadataError;
-use wayland_client::{
-    global_filter, protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main,
-};
+use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 
-use std::{
-    io::Read,
-    os::unix::prelude::MetadataExt,
-    sync::{mpsc::channel, Arc, RwLock},
-};
+use std::sync::{mpsc::channel, Arc, RwLock};
 
-use wayland_client::{
-    protocol::{wl_compositor, wl_output},
-    Display, GlobalManager,
-};
+use wayland_client::{protocol::wl_output, Display, GlobalManager};
 
 use clap::ArgEnum;
 use lazy_regex::regex_is_match;
@@ -32,6 +23,7 @@ mod watchdog;
 mod worker;
 
 use crate::image::error::ImageError;
+use crate::metadata::MetadataReader;
 
 use thiserror::Error;
 
@@ -142,8 +134,6 @@ pub enum Mode {
     Static,
     Dynamic,
 }
-
-use crate::metadata::{Metadata, MetadataReader};
 
 fn main() {
     let args = Args::parse();

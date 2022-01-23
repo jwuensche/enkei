@@ -1,6 +1,5 @@
 use std::{
-    error::Error,
-    fmt::{Display, Write},
+    fmt::Display,
     sync::{Arc, RwLock},
 };
 
@@ -10,13 +9,15 @@ use crate::{
     ApplicationError,
 };
 
+type SharedOutputs = Arc<RwLock<Vec<Arc<RwLock<Output>>>>>;
+
 // This module serves to display a reportable error if any error occur during execution.
 // It is inspired by `human_panic` which is quite nice to deal with panics.
 // I will try to reproduce some more usable for the user to interpret.
 pub struct ErrorReport {
     error: ApplicationError,
     metadata: Option<Metadata>,
-    outputs: Option<Arc<RwLock<Vec<Arc<RwLock<Output>>>>>>,
+    outputs: Option<SharedOutputs>,
 }
 
 const ERROR_HEADER: &str = "###### ERROR ######
@@ -38,7 +39,7 @@ impl ErrorReport {
         self
     }
 
-    pub fn with_outputs(mut self, outputs: Arc<RwLock<Vec<Arc<RwLock<Output>>>>>) -> Self {
+    pub fn with_outputs(mut self, outputs: SharedOutputs) -> Self {
         self.outputs = Some(outputs);
         self
     }

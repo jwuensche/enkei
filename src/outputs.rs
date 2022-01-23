@@ -1,12 +1,10 @@
 use getset::Getters;
-use serde::__private::de::FlatInternallyTaggedAccess;
-use std::fmt::{Display, Write};
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::{Arc, RwLock, RwLockReadGuard};
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, RwLock};
 use thiserror::Error;
 
 use wayland_client::protocol::wl_output;
-use wayland_client::protocol::wl_output::{Mode as ModeFlag, Subpixel, Transform, WlOutput};
+use wayland_client::protocol::wl_output::{Mode as ModeFlag, WlOutput};
 use wayland_client::Main;
 
 #[derive(Error, Debug)]
@@ -47,17 +45,9 @@ pub struct Geometry {
     #[get = "pub"]
     y: i32,
     #[get = "pub"]
-    physical_width: i32,
-    #[get = "pub"]
-    physical_height: i32,
-    #[get = "pub"]
-    subpixel: Subpixel,
-    #[get = "pub"]
     make: String,
     #[get = "pub"]
     model: String,
-    #[get = "pub"]
-    transform: Transform,
 }
 
 impl Output {
@@ -79,10 +69,6 @@ impl Output {
         self.mode.as_ref()
     }
 
-    pub fn scale(&self) -> i32 {
-        self.scale
-    }
-
     pub fn inner(&self) -> &WlOutput {
         &self.inner
     }
@@ -102,24 +88,15 @@ pub fn handle_output_events(
         wl_output::Event::Geometry {
             x,
             y,
-            physical_width,
-            physical_height,
-            subpixel,
+            physical_width: _,
+            physical_height: _,
+            subpixel: _,
             make,
             model,
-            transform,
+            transform: _,
         } => {
             let mut lock = pass.write().expect("Could not lock output object");
-            lock.geometry = Some(Geometry {
-                x,
-                y,
-                physical_width,
-                physical_height,
-                subpixel,
-                make,
-                model,
-                transform,
-            });
+            lock.geometry = Some(Geometry { x, y, make, model });
         }
         wl_output::Event::Mode {
             flags,

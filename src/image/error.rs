@@ -1,6 +1,5 @@
 use image::error::DecodingError;
 use image::error::LimitError;
-use image::error::ParameterError;
 use image::error::UnsupportedError;
 use thiserror::Error;
 

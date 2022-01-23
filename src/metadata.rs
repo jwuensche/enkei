@@ -43,7 +43,7 @@ impl MetadataReader {
             } = config
                 .images
                 .get(0)
-                .ok_or_else(|| MetadataError::InvalidTimeFormat)?
+                .ok_or(MetadataError::InvalidTimeFormat)?
             {
                 NaiveDate::from_ymd(*year as i32, *month, *day).and_hms(*hour, *minute, *second)
             } else {

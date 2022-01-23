@@ -1,46 +1,32 @@
-use crate::image::error::ImageError;
-use crate::{
-    image::scaling::{Filter, Scaling},
-    outputs::Mode,
-    util::ResourceLoader,
-};
-
 use super::outputs::Output;
-use image::DynamicImage;
-use khronos_egl::{
-    Config as eglConfig, Context as eglContext, Display as eglDisplay, Surface as eglSurface,
-};
+use khronos_egl::{Context as eglContext, Display as eglDisplay, Surface as eglSurface};
 use wayland_egl::WlEglSurface;
 
 use super::opengl::context::Context as glContext;
 
 use super::egl;
 use wayland_client::{
-    protocol::{wl_compositor::WlCompositor, wl_display, wl_surface::WlSurface},
+    protocol::{wl_compositor::WlCompositor, wl_surface::WlSurface},
     EventQueue, Main,
 };
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,
 };
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surface_v1::{
-    Anchor, Event as LayerEvent, ZwlrLayerSurfaceV1,
+    Anchor, Event as LayerEvent,
 };
 
 #[derive(Debug)]
 pub struct OutputRendering {
     pub output: Arc<RwLock<Output>>,
     output_id: u32,
-    scaled: HashMap<String, Vec<u8>>,
     surface: Main<WlSurface>,
     egl_context: eglContext,
     egl_display: eglDisplay,
-    wl_egl_surface: WlEglSurface,
+    _wl_egl_surface: WlEglSurface,
     egl_surface: eglSurface,
     gl_context: glContext,
 }
@@ -71,8 +57,8 @@ impl OutputRendering {
         background.quick_assign(|layer, event, _| {
             if let LayerEvent::Configure {
                 serial,
-                width,
-                height,
+                width: _,
+                height: _,
             } = event
             {
                 // Ignore the resolution received while registering, we know on which output we are.
@@ -105,7 +91,7 @@ impl OutputRendering {
         egl.swap_interval(egl_display, 0).unwrap();
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
-        let context = super::opengl::context::Context::new(buf_x as i32, buf_y as i32);
+        let context = super::opengl::context::Context::new();
         // Make the buffer the current one
         egl.swap_buffers(egl_display, egl_surface).unwrap();
         surface.commit();
@@ -125,10 +111,9 @@ impl OutputRendering {
         OutputRendering {
             output,
             output_id,
-            scaled: HashMap::new(),
             surface,
             egl_context,
-            wl_egl_surface,
+            _wl_egl_surface: wl_egl_surface,
             egl_display,
             egl_surface,
             gl_context: context,

@@ -35,7 +35,7 @@ impl Image {
             height as i32,
             stride,
         )
-        .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
+        .map_err(ImageError::CouldNotCreateSurface)?;
         Ok(Self {
             inner: surface,
             scaling,

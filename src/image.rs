@@ -1,3 +1,5 @@
 pub mod error;
-pub mod image;
+mod images;
 pub mod scaling;
+
+pub use images::*;

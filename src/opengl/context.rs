@@ -4,9 +4,9 @@ use log::debug;
 
 #[derive(Debug)]
 pub struct Context {
-    vao: u32,
-    vbo: u32,
-    ebo: u32,
+    _vao: u32,
+    _vbo: u32,
+    _ebo: u32,
     tex_from: u32,
     tex_to: u32,
     shader_program: Program,
@@ -15,8 +15,8 @@ pub struct Context {
 #[derive(Debug)]
 pub struct Program {
     id: u32,
-    vertex_shader: Shader,
-    fragment_shader: Shader,
+    _vertex_shader: Shader,
+    _fragment_shader: Shader,
 }
 
 impl Program {
@@ -39,15 +39,15 @@ impl Program {
             check_error("Use Program");
             let program = Self {
                 id: shader_program,
-                vertex_shader,
-                fragment_shader,
+                _vertex_shader: vertex_shader,
+                _fragment_shader: fragment_shader,
             };
             program.link_arguments();
             program
         }
     }
 
-    fn link_arguments(&self) -> () {
+    fn link_arguments(&self) {
         debug!("Linking \"position\" argument");
         unsafe {
             let pos = std::ffi::CStr::from_bytes_with_nul_unchecked(b"position\0");
@@ -87,7 +87,7 @@ impl Program {
 }
 
 impl Context {
-    pub fn new(width: i32, height: i32) -> Self {
+    pub fn new() -> Self {
         let vertices: [f32; 16] = [
             // Positions    // TexCoords
             -1.0, 1.0, 0.0, 0.0, // top-left
@@ -150,30 +150,30 @@ impl Context {
             gl::Uniform1i(to_location, 1);
         }
         Self {
-            vao,
-            ebo,
-            vbo,
+            _vao: vao,
+            _ebo: ebo,
+            _vbo: vbo,
             tex_from,
             tex_to,
             shader_program: program,
         }
     }
 
-    pub fn set_from(&self, pic: &[u8], width: i32, height: i32) -> () {
+    pub fn set_from(&self, pic: &[u8], width: i32, height: i32) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.set_image(pic, width, height, self.tex_from)
         }
     }
 
-    pub fn set_to(&self, pic: &[u8], width: i32, height: i32) -> () {
+    pub fn set_to(&self, pic: &[u8], width: i32, height: i32) {
         unsafe {
             gl::ActiveTexture(gl::TEXTURE1);
             self.set_image(pic, width, height, self.tex_to)
         }
     }
 
-    unsafe fn set_image(&self, pic: &[u8], width: i32, height: i32, tex_id: u32) -> () {
+    unsafe fn set_image(&self, pic: &[u8], width: i32, height: i32, tex_id: u32) {
         gl::BindTexture(gl::TEXTURE_2D, tex_id);
         gl::TexImage2D(
             gl::TEXTURE_2D,
@@ -212,18 +212,6 @@ impl Context {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
             check_error("Drawing");
-        }
-    }
-
-    pub fn destroy(&self) {
-        debug!("Destroying OpenGL Context");
-        unsafe {
-            gl::DeleteProgram(self.shader_program.id);
-            gl::DeleteShader(self.shader_program.fragment_shader.id());
-            gl::DeleteShader(self.shader_program.vertex_shader.id());
-            gl::DeleteBuffers(1, self.vbo as *const u32);
-            gl::DeleteBuffers(1, self.ebo as *const u32);
-            gl::DeleteVertexArrays(1, self.vao as *const u32);
         }
     }
 }

@@ -1,4 +1,4 @@
-use cairo::{ImageSurface, Rectangle};
+use cairo::ImageSurface;
 
 use super::error::ImageError;
 
@@ -46,18 +46,16 @@ impl Scaling {
                 *geometry.width(),
                 *geometry.height(),
             )
-            .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
-            let ctx =
-                cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
+            .map_err(ImageError::CouldNotCreateSurface)?;
+            let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
             ctx.set_source_surface(buf, pad_width, pad_height)
-                .map_err(|e| ImageError::CouldNotSetSource(e))?;
-            ctx.paint()
-                .map_err(|e| ImageError::CouldNotWriteResult(e))?;
+                .map_err(ImageError::CouldNotSetSource)?;
+            ctx.paint().map_err(ImageError::CouldNotWriteResult)?;
             drop(ctx);
 
             Ok(target
                 .take_data()
-                .map_err(|e| ImageError::CouldNotGetData(e))?
+                .map_err(ImageError::CouldNotGetData)?
                 .to_vec())
         }
     }
@@ -101,20 +99,18 @@ impl Scaling {
                 *geometry.width(),
                 *geometry.height(),
             )
-            .map_err(|e| ImageError::CouldNotCreateSurface(e))?;
-            let ctx =
-                cairo::Context::new(&target).map_err(|e| ImageError::CouldNotCreateContext(e))?;
+            .map_err(ImageError::CouldNotCreateSurface)?;
+            let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
             ctx.scale(max_ratio, max_ratio);
             ctx.set_source_surface(buf, -crop_width, -crop_height)
-                .map_err(|e| ImageError::CouldNotSetSource(e))?;
+                .map_err(ImageError::CouldNotSetSource)?;
             ctx.source().set_filter(filter.into());
-            ctx.paint()
-                .map_err(|e| ImageError::CouldNotWriteResult(e))?;
+            ctx.paint().map_err(ImageError::CouldNotWriteResult)?;
             drop(ctx);
 
             let data = target
                 .take_data()
-                .map_err(|e| ImageError::CouldNotGetData(e))?
+                .map_err(ImageError::CouldNotGetData)?
                 .to_vec();
             Ok(data
                 .chunks_exact(4)

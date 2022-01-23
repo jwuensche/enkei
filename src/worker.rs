@@ -1,7 +1,6 @@
-use std::io::Read;
 use std::sync::mpsc::{Receiver, Sender};
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use log::debug;
 use wayland_client::{Display, EventQueue, GlobalManager};
@@ -9,15 +8,12 @@ use wayland_client::{Display, EventQueue, GlobalManager};
 use wayland_client::protocol::wl_compositor;
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::ZwlrLayerShellV1;
 
-use image::GenericImageView;
-
 use crate::image::scaling::{Filter, Scaling};
 
-use crate::messages::{self, WorkerMessage};
-use crate::metadata::{Metadata, MetadataError, MetadataReader, State};
-use crate::outputs::Output;
+use crate::messages::WorkerMessage;
+use crate::metadata::{Metadata, MetadataError, State};
 use crate::util::ResourceLoader;
-use crate::watchdog::{self, timer};
+use crate::watchdog::timer;
 use crate::ApplicationError;
 
 const FPS: f64 = 60.0;
@@ -57,7 +53,7 @@ pub fn work(
     // Process all pending requests
     loop {
         event_queue
-            .sync_roundtrip(&mut (), |_, event, _| {
+            .sync_roundtrip(&mut (), |_, _, _| {
                 // NO-OP
             })
             .unwrap();
@@ -65,7 +61,7 @@ pub fn work(
         if let Ok(msg) = messages.recv_timeout(std::time::Duration::from_millis(500)) {
             // do something with new found messages
             match msg {
-                messages::WorkerMessage::AddOutput(output, id) => {
+                WorkerMessage::AddOutput(output, id) => {
                     debug!("Message: AddOutput {{ id: {} }}", id);
 
                     if renders
@@ -105,7 +101,7 @@ pub fn work(
                         state_draw(&state, output, &mut ticker_active, senders.clone());
                     }
                 }
-                messages::WorkerMessage::RemoveOutput(id) => {
+                WorkerMessage::RemoveOutput(id) => {
                     debug!("Message: RemoveOutput {{ id: {} }}", id);
                     let mut res = renders.iter().enumerate().filter_map(|elem| {
                         let lock = elem.1.output.read().unwrap();
@@ -125,7 +121,7 @@ pub fn work(
                         renders.swap_remove(valid);
                     }
                 }
-                messages::WorkerMessage::AnimationStep(process) => {
+                WorkerMessage::AnimationStep(process) => {
                     debug!("Message: AnimationStep {{ process: {} }}", process);
                     for output in renders.iter() {
                         debug!("Drawing on WlOutput {{ id: {} }}", output.output_id());
@@ -137,7 +133,7 @@ pub fn work(
                             .expect("This should never break");
                     }
                 }
-                messages::WorkerMessage::AnimationStart(duration) => {
+                WorkerMessage::AnimationStart(duration) => {
                     debug!("Message: AnimationStart {{ duration: {}s }}", duration);
                     let count = (duration * FPS).clamp(1.0, 600.0);
                     timer::spawn_animation_ticker(
@@ -147,7 +143,7 @@ pub fn work(
                         senders.clone(),
                     );
                 }
-                messages::WorkerMessage::Refresh => {
+                WorkerMessage::Refresh => {
                     debug!("Message: Refresh");
                     let start = std::time::Instant::now();
                     ticker_active = false;
@@ -228,21 +224,15 @@ fn refresh_output(
     let lock = output.output.read().unwrap();
     let width = *lock.mode().unwrap().width();
     let height = *lock.mode().unwrap().height();
-    let mode: crate::outputs::Mode = lock.mode().unwrap().clone();
+    let mode: crate::outputs::Mode = *lock.mode().unwrap();
     drop(lock);
 
-    let transition;
-    let progress;
-    match metadata {
-        State::Static(p, t) => {
-            progress = p;
-            transition = t;
+    let transition = {
+        match metadata {
+            State::Static(_, t) => t,
+            State::Transition(_, t) => t,
         }
-        State::Transition(p, t) => {
-            progress = p;
-            transition = t;
-        }
-    }
+    };
 
     // TODO: Handle errors here
     let from = resources

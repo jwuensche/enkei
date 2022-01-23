@@ -1,4 +1,3 @@
-use super::metadata::Transition;
 use super::outputs::Output;
 use send_wrapper::SendWrapper;
 use std::sync::{Arc, RwLock};

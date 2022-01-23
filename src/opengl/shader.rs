@@ -1,4 +1,4 @@
-use gl::types::{GLenum, GLint};
+use gl::types::GLenum;
 use log::error;
 
 use super::error::check_error;
@@ -6,7 +6,6 @@ use super::error::check_error;
 #[derive(Debug)]
 pub struct Shader {
     id: u32,
-    kind: GLenum,
 }
 
 const VSHADER: &[u8] = b"#version 150 core
@@ -60,7 +59,7 @@ impl Shader {
             std::process::exit(1);
         }
         check_error("Shader Creation");
-        Self { id: shader, kind }
+        Self { id: shader }
     }
 
     pub fn id(&self) -> u32 {
