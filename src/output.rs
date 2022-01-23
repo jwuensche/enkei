@@ -10,7 +10,8 @@ use wayland_client::{
     EventQueue, Main,
 };
 
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
+use std::rc::Rc;
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,
@@ -21,7 +22,7 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_surfac
 
 #[derive(Debug)]
 pub struct OutputRendering {
-    pub output: Arc<RwLock<Output>>,
+    pub output: Rc<RwLock<Output>>,
     output_id: u32,
     surface: Main<WlSurface>,
     egl_context: eglContext,
@@ -36,7 +37,7 @@ impl OutputRendering {
         compositor: &Main<WlCompositor>,
         layers: &Main<ZwlrLayerShellV1>,
         event_queue: &mut EventQueue,
-        output: Arc<RwLock<Output>>,
+        output: Rc<RwLock<Output>>,
         egl_display: eglDisplay,
         buf_x: u32,
         buf_y: u32,

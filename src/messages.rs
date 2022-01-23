@@ -1,10 +1,11 @@
 use super::outputs::Output;
 use send_wrapper::SendWrapper;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum WorkerMessage {
-    AddOutput(SendWrapper<Arc<RwLock<Output>>>, u32),
+    AddOutput(SendWrapper<Rc<RwLock<Output>>>, u32),
     RemoveOutput(u32),
     AnimationStep(f32),
     AnimationStart(f64),

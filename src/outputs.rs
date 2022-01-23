@@ -1,6 +1,7 @@
 use getset::Getters;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
+use std::rc::Rc;
 
 use wayland_client::protocol::wl_output;
 use wayland_client::protocol::wl_output::{Mode as ModeFlag, WlOutput};
@@ -72,7 +73,7 @@ impl Output {
 }
 
 pub fn handle_output_events(
-    pass: &Arc<RwLock<Output>>,
+    pass: &Rc<RwLock<Output>>,
     event: wl_output::Event,
     added: &Sender<WorkerMessage>,
     id: u32,
@@ -111,7 +112,7 @@ pub fn handle_output_events(
         }
         wl_output::Event::Done => added
             .send(WorkerMessage::AddOutput(
-                SendWrapper::new(Arc::clone(pass)),
+                SendWrapper::new(Rc::clone(pass)),
                 id,
             ))
             .unwrap(),

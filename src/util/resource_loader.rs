@@ -1,5 +1,4 @@
 use crate::outputs::Mode;
-use std::collections::HashMap;
 
 use log::debug;
 

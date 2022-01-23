@@ -3,7 +3,8 @@ use log::debug;
 use metadata::MetadataError;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 
-use std::sync::{mpsc::channel, Arc, RwLock};
+use std::sync::{mpsc::channel, RwLock};
+use std::rc::Rc;
 
 use wayland_client::{protocol::wl_output, Display, GlobalManager};
 
@@ -137,8 +138,8 @@ fn main() {
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
 
-    let wl_outputs = Arc::new(RwLock::new(Vec::new()));
-    let pass_outputs = Arc::clone(&wl_outputs);
+    let wl_outputs = Rc::new(RwLock::new(Vec::new()));
+    let pass_outputs = Rc::clone(&wl_outputs);
 
     let (message_tx, message_rx) = channel();
     let tx = message_tx.clone();
@@ -156,8 +157,8 @@ fn main() {
                     id, version
                 );
                 let output: Main<wl_output::WlOutput> = data.bind(version, id);
-                let new_output = Arc::new(RwLock::new(Output::new(output.clone(), id)));
-                let pass = Arc::clone(&new_output);
+                let new_output = Rc::new(RwLock::new(Output::new(output.clone(), id)));
+                let pass = Rc::clone(&new_output);
                 let added = tx.clone();
                 output.quick_assign(move |_, event, _| {
                     handle_output_events(&pass, event, &added, id);

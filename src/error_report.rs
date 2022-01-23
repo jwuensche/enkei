@@ -1,6 +1,7 @@
 use std::{
     fmt::Display,
-    sync::{Arc, RwLock},
+    sync::RwLock,
+    rc::Rc,
 };
 
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
     ApplicationError,
 };
 
-type SharedOutputs = Arc<RwLock<Vec<Arc<RwLock<Output>>>>>;
+type SharedOutputs = Rc<RwLock<Vec<Rc<RwLock<Output>>>>>;
 
 // This module serves to display a reportable error if any error occur during execution.
 // It is inspired by `human_panic` which is quite nice to deal with panics.

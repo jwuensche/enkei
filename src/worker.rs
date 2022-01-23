@@ -1,6 +1,6 @@
 use std::sync::mpsc::{Receiver, Sender};
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use log::debug;
 use wayland_client::{Display, EventQueue, GlobalManager};
@@ -101,7 +101,7 @@ pub fn work(
                             &compositor,
                             &layers,
                             &mut event_queue,
-                            Arc::clone(&output),
+                            Rc::clone(&output),
                             egl_display,
                             width as u32,
                             height as u32,
