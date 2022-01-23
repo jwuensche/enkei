@@ -47,14 +47,6 @@ pub enum ApplicationError {
     InvalidDataType,
 }
 
-impl<'a> From<outputs::OutputError<'a>> for ApplicationError {
-    fn from(err: outputs::OutputError<'a>) -> Self {
-        match err {
-            outputs::OutputError::KeyNotDefined(key) => Self::AccessError(key.into()),
-        }
-    }
-}
-
 impl From<image::error::ImageError> for ApplicationError {
     fn from(e: image::error::ImageError) -> Self {
         ApplicationError::ErrorWhileImageProcessing(e)

@@ -11,12 +11,30 @@ use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_
 use crate::image::scaling::{Filter, Scaling};
 
 use crate::messages::WorkerMessage;
-use crate::metadata::{Metadata, MetadataError, State};
+use crate::metadata::{AnimationState, Metadata, MetadataError};
 use crate::util::ResourceLoader;
 use crate::watchdog::timer;
 use crate::ApplicationError;
 
-const FPS: f64 = 60.0;
+pub struct State {
+    fps: f64,
+    ticker_active: bool,
+    renders: Vec<OutputRendering>,
+}
+
+impl State {
+    fn new() -> Self {
+        Self {
+            fps: 1f64,
+            ticker_active: false,
+            renders: Vec::new(),
+        }
+    }
+
+    fn set_fps(&mut self, new: f64) {
+        self.fps = f64::max(self.fps, new);
+    }
+}
 
 pub fn work(
     globals: GlobalManager,
@@ -46,9 +64,7 @@ pub fn work(
 
     // Use an output independent store for loaded images, allows for some reduction in IO time
     let mut resource_loader = ResourceLoader::new();
-
-    let mut renders = Vec::new();
-    let mut ticker_active = false;
+    let mut state = State::new();
 
     // Process all pending requests
     loop {
@@ -64,7 +80,8 @@ pub fn work(
                 WorkerMessage::AddOutput(output, id) => {
                     debug!("Message: AddOutput {{ id: {} }}", id);
 
-                    if renders
+                    if state
+                        .renders
                         .iter()
                         .filter(|elem: &&OutputRendering| elem.output_id() == id)
                         .count()
@@ -78,8 +95,9 @@ pub fn work(
                         }
                         let width = *lock.mode().unwrap().width();
                         let height = *lock.mode().unwrap().height();
+                        state.set_fps(*lock.mode().unwrap().refresh() as f64 / 1000f64);
                         drop(lock);
-                        renders.push(OutputRendering::new(
+                        state.renders.push(OutputRendering::new(
                             &compositor,
                             &layers,
                             &mut event_queue,
@@ -88,22 +106,28 @@ pub fn work(
                             width as u32,
                             height as u32,
                         ));
-                        let output = renders.last_mut().unwrap();
-                        let state = metadata.current()?;
+                        let output = state.renders.last_mut().unwrap();
+                        let animation_state = metadata.current()?;
                         refresh_output(
                             output,
                             &mut resource_loader,
-                            &state,
+                            &animation_state,
                             Scaling::Fill,
                             Filter::Best,
                         )
                         .expect("Could not refresh");
-                        state_draw(&state, output, &mut ticker_active, senders.clone());
+                        state.ticker_active = state_draw(
+                            &animation_state,
+                            output,
+                            state.ticker_active,
+                            state.fps,
+                            senders.clone(),
+                        );
                     }
                 }
                 WorkerMessage::RemoveOutput(id) => {
                     debug!("Message: RemoveOutput {{ id: {} }}", id);
-                    let mut res = renders.iter().enumerate().filter_map(|elem| {
+                    let mut res = state.renders.iter().enumerate().filter_map(|elem| {
                         let lock = elem.1.output.read().unwrap();
                         if lock.id() == id {
                             Some(elem.0)
@@ -115,15 +139,15 @@ pub fn work(
                     if let Some(valid) = res.next() {
                         debug!(
                             "Removing WlOuput Renderer {{ id: {} }}",
-                            renders[valid].output_id()
+                            state.renders[valid].output_id()
                         );
-                        renders[valid].destroy();
-                        renders.swap_remove(valid);
+                        state.renders[valid].destroy();
+                        state.renders.swap_remove(valid);
                     }
                 }
                 WorkerMessage::AnimationStep(process) => {
                     debug!("Message: AnimationStep {{ process: {} }}", process);
-                    for output in renders.iter() {
+                    for output in state.renders.iter() {
                         debug!("Drawing on WlOutput {{ id: {} }}", output.output_id());
                         output.draw(ezing::quad_inout(process));
                     }
@@ -135,7 +159,7 @@ pub fn work(
                 }
                 WorkerMessage::AnimationStart(duration) => {
                     debug!("Message: AnimationStart {{ duration: {}s }}", duration);
-                    let count = (duration * FPS).clamp(1.0, 600.0);
+                    let count = calc_frame_updates(duration, state.fps);
                     timer::spawn_animation_ticker(
                         std::time::Duration::from_secs_f64(duration / count),
                         count as u64,
@@ -146,18 +170,24 @@ pub fn work(
                 WorkerMessage::Refresh => {
                     debug!("Message: Refresh");
                     let start = std::time::Instant::now();
-                    ticker_active = false;
-                    let state = metadata.current()?;
-                    for output in renders.iter_mut() {
+                    state.ticker_active = false;
+                    let animation_state = metadata.current()?;
+                    for output in state.renders.iter_mut() {
                         refresh_output(
                             output,
                             &mut resource_loader,
-                            &state,
+                            &animation_state,
                             Scaling::Fill,
                             Filter::Best,
                         )
                         .expect("Could not refresh");
-                        state_draw(&state, output, &mut ticker_active, senders.clone());
+                        state.ticker_active = state_draw(
+                            &animation_state,
+                            output,
+                            state.ticker_active,
+                            state.fps,
+                            senders.clone(),
+                        );
                     }
                     debug!(
                         "Refreshing of all outputs took {}ms",
@@ -170,46 +200,53 @@ pub fn work(
     }
 }
 
+fn calc_frame_updates(duration: f64, fps: f64) -> f64 {
+    (duration * fps).clamp(1.0, 300.0)
+}
+
 fn state_draw(
-    state: &State,
+    animation_state: &AnimationState,
     output: &mut OutputRendering,
-    ticker_active: &mut bool,
+    mut ticker_active: bool,
+    fps: f64,
     senders: Sender<WorkerMessage>,
-) {
-    match state {
-        State::Static(progress, transition) => {
-            if transition.is_animated() && !*ticker_active {
+) -> bool {
+    match animation_state {
+        AnimationState::Static(progress, transition) => {
+            if transition.is_animated() && !ticker_active {
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,
                     WorkerMessage::AnimationStart(transition.duration_transition()),
                 );
-                *ticker_active = true;
-            } else if !*ticker_active {
+                ticker_active = true;
+            } else if !ticker_active {
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,
                     WorkerMessage::Refresh,
                 );
-                *ticker_active = true;
+                ticker_active = true;
             }
             output.draw(0.0);
+            ticker_active
         }
-        State::Transition(progress, transition) => {
+        AnimationState::Transition(progress, transition) => {
             // This state is always animated
-            let count = (transition.duration_transition() * FPS).clamp(1.0, 600.0);
+            let count = calc_frame_updates(transition.duration_transition(), fps);
             let step = transition.duration_transition() / count;
             let finished = progress / step;
-            if !*ticker_active {
+            if !ticker_active {
                 timer::spawn_animation_ticker(
                     std::time::Duration::from_secs_f64(step),
                     count as u64,
                     finished as u64,
                     senders,
                 );
-                *ticker_active = true;
+                ticker_active = true;
             }
             output.draw((finished / count) as f32);
+            ticker_active
         }
     }
 }
@@ -217,7 +254,7 @@ fn state_draw(
 fn refresh_output(
     output: &mut OutputRendering,
     resources: &mut ResourceLoader,
-    metadata: &State,
+    metadata: &AnimationState,
     scaling: Scaling,
     filter: Filter,
 ) -> Result<(), MetadataError> {
@@ -229,8 +266,8 @@ fn refresh_output(
 
     let transition = {
         match metadata {
-            State::Static(_, t) => t,
-            State::Transition(_, t) => t,
+            AnimationState::Static(_, t) => t,
+            AnimationState::Transition(_, t) => t,
         }
     };
 

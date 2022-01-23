@@ -1,17 +1,10 @@
 use getset::Getters;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, RwLock};
-use thiserror::Error;
 
 use wayland_client::protocol::wl_output;
 use wayland_client::protocol::wl_output::{Mode as ModeFlag, WlOutput};
 use wayland_client::Main;
-
-#[derive(Error, Debug)]
-pub enum OutputError<'a> {
-    #[error("Output does not have member `{0}` defined")]
-    KeyNotDefined(&'a str),
-}
 
 use crate::messages::WorkerMessage;
 use send_wrapper::SendWrapper;

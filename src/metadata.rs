@@ -193,13 +193,13 @@ pub struct Metadata {
     total_duration_sec: f64,
 }
 
-pub enum State {
+pub enum AnimationState {
     Static(f64, Transition),
     Transition(f64, Transition),
 }
 
 impl Metadata {
-    pub fn current(&self) -> Result<State, MetadataError> {
+    pub fn current(&self) -> Result<AnimationState, MetadataError> {
         let now = Local::now().naive_local();
 
         let diff = (now - self.start_time).num_seconds() as f64 % self.total_duration_sec;
@@ -210,9 +210,9 @@ impl Metadata {
             .ok_or(MetadataError::CurrentFrame)?;
 
         Ok(if diff - cur.time_range().start < cur.duration_static() {
-            State::Static(diff - cur.time_range().start, cur.clone())
+            AnimationState::Static(diff - cur.time_range().start, cur.clone())
         } else {
-            State::Transition(
+            AnimationState::Transition(
                 diff - cur.time_range().start - cur.duration_static(),
                 cur.clone(),
             )
