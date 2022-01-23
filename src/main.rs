@@ -1,3 +1,4 @@
+use error_report::ErrorReport;
 use log::debug;
 use metadata::MetadataError;
 use wayland_client::{
@@ -6,7 +7,7 @@ use wayland_client::{
 
 use std::{
     os::unix::prelude::MetadataExt,
-    sync::{mpsc::channel, Arc, RwLock},
+    sync::{mpsc::channel, Arc, RwLock}, io::Read,
 };
 
 use wayland_client::{
@@ -27,6 +28,7 @@ mod schema;
 mod util;
 mod watchdog;
 mod worker;
+mod error_report;
 
 use crate::image::error::ImageError;
 
@@ -142,7 +144,7 @@ pub enum Mode {
 
 use crate::metadata::{Metadata, MetadataReader};
 
-fn main() -> Result<(), ApplicationError> {
+fn main() {
     let args = Args::parse();
     env_logger::init();
     /*
@@ -214,30 +216,43 @@ fn main() -> Result<(), ApplicationError> {
      */
     let metadata = {
         match args.mode {
-            Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
-            Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
+            Some(Mode::Static) => Ok(MetadataReader::static_configuration(&args.file)),
+            Some(Mode::Dynamic) => MetadataReader::read(args.file),
             None => {
                 if args.file.ends_with(".xml") {
-                    MetadataReader::read(args.file)?
+                    MetadataReader::read(args.file)
                 } else if regex_is_match!(
                     r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
                     &args.file
                 ) {
-                    MetadataReader::static_configuration(&args.file)
+                    Ok(MetadataReader::static_configuration(&args.file))
                 } else {
-                    return Err(ApplicationError::InvalidDataType);
+                    let error = ErrorReport::new(ApplicationError::InvalidDataType);
+                    error.report();
+                    std::process::exit(1);
                 }
             }
         }
     };
 
-    worker::work(
-        globals,
-        display,
-        message_rx,
-        message_tx,
-        event_queue,
-        metadata,
-    )?;
-    Ok(())
+    if let Ok(meta) = metadata {
+        let result = worker::work(
+            globals,
+            display,
+            message_rx,
+            message_tx,
+            event_queue,
+            meta.clone(),
+        );
+        if let Err(e) = result {
+            let report: ErrorReport = e.into();
+            report.with_metadata(meta).with_outputs(wl_outputs).report();
+            std::process::exit(1);
+        }
+    } else {
+        let report: ErrorReport = metadata.unwrap_err().into();
+        report.report();
+        std::process::exit(1);
+    }
+    std::process::exit(0);
 }
