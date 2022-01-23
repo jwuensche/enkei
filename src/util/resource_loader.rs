@@ -42,7 +42,7 @@ impl ResourceLoader {
         }
 
         // uGH DiSgUsTiNg
-         if !self.last_loaded.cache_get(&path.to_string()).is_some() {
+         if self.last_loaded.cache_get(&path.to_string()).is_none() {
             let surface = Image::new(path, scaling, filter)?;
              debug!("Caching image {{ path: {} }}", path);
              self.last_loaded.cache_set(path.to_string(), surface);

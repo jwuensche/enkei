@@ -82,7 +82,7 @@ pub fn work(
                     debug!("Message: AddOutput {{ id: {} }}", id);
 
                     if state.renders.contains_key(&id) {
-                        debug!("Display updated and not new.");
+                        debug!("Output {{ id: {id} }} updated and not new.");
                     } else {
                         let lock = output.read().unwrap();
                         if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
