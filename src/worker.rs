@@ -15,11 +15,12 @@ use crate::metadata::{AnimationState, Metadata, MetadataError};
 use crate::util::ResourceLoader;
 use crate::watchdog::timer;
 use crate::ApplicationError;
+use std::collections::HashMap;
 
 pub struct State {
     fps: f64,
     ticker_active: bool,
-    renders: Vec<OutputRendering>,
+    renders: HashMap<u32, OutputRendering>,
 }
 
 impl State {
@@ -27,7 +28,7 @@ impl State {
         Self {
             fps: 1f64,
             ticker_active: false,
-            renders: Vec::new(),
+            renders: HashMap::new(),
         }
     }
 
@@ -80,13 +81,7 @@ pub fn work(
                 WorkerMessage::AddOutput(output, id) => {
                     debug!("Message: AddOutput {{ id: {} }}", id);
 
-                    if state
-                        .renders
-                        .iter()
-                        .filter(|elem: &&OutputRendering| elem.output_id() == id)
-                        .count()
-                        > 0
-                    {
+                    if state.renders.contains_key(&id) {
                         debug!("Display updated and not new.");
                     } else {
                         let lock = output.read().unwrap();
@@ -97,7 +92,7 @@ pub fn work(
                         let height = *lock.mode().unwrap().height();
                         state.set_fps(*lock.mode().unwrap().refresh() as f64 / 1000f64);
                         drop(lock);
-                        state.renders.push(OutputRendering::new(
+                        state.renders.insert(id, OutputRendering::new(
                             &compositor,
                             &layers,
                             &mut event_queue,
@@ -106,7 +101,7 @@ pub fn work(
                             width as u32,
                             height as u32,
                         ));
-                        let output = state.renders.last_mut().unwrap();
+                        let output = state.renders.get_mut(&id).expect("Cannot fail");
                         let animation_state = metadata.current()?;
                         refresh_output(
                             output,
@@ -127,28 +122,19 @@ pub fn work(
                 }
                 WorkerMessage::RemoveOutput(id) => {
                     debug!("Message: RemoveOutput {{ id: {} }}", id);
-                    let mut res = state.renders.iter().enumerate().filter_map(|elem| {
-                        let lock = elem.1.output.read().unwrap();
-                        if lock.id() == id {
-                            Some(elem.0)
-                        } else {
-                            None
-                        }
-                    });
 
-                    if let Some(valid) = res.next() {
+                    if let Some(output) = state.renders.remove(&id) {
                         debug!(
                             "Removing WlOuput Renderer {{ id: {} }}",
-                            state.renders[valid].output_id()
+                            output.output_id()
                         );
-                        state.renders[valid].destroy();
-                        state.renders.swap_remove(valid);
+                        output.destroy();
                     }
                 }
                 WorkerMessage::AnimationStep(process) => {
                     debug!("Message: AnimationStep {{ process: {} }}", process);
-                    for output in state.renders.iter() {
-                        debug!("Drawing on WlOutput {{ id: {} }}", output.output_id());
+                    for (id, output) in state.renders.iter() {
+                        debug!("Drawing on WlOutput {{ id: {} }}", id);
                         output.draw(ezing::quad_inout(process));
                     }
                     if process >= 1.0 {
@@ -171,8 +157,9 @@ pub fn work(
                     debug!("Message: Refresh");
                     let start = std::time::Instant::now();
                     state.ticker_active = false;
+                    // TODO: Cancel all running timer watchdogs
                     let animation_state = metadata.current()?;
-                    for output in state.renders.iter_mut() {
+                    for (_, output) in state.renders.iter_mut() {
                         refresh_output(
                             output,
                             &mut resource_loader,
@@ -193,7 +180,6 @@ pub fn work(
                         "Refreshing of all outputs took {}ms",
                         start.elapsed().as_millis()
                     );
-                    // Cancel all running timer watchdogs
                 }
             }
         }
