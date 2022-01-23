@@ -199,11 +199,6 @@ fn main() {
         .unwrap();
 
     /*
-     * Initialize Watchdogs for Suspension Cycles
-     */
-    watchdog::sleeping::initialize(message_tx.clone());
-
-    /*
      * Read Metadata or Prepare Static Mode
      */
     let metadata = {
