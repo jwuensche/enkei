@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use super::{error::ImageError, scaling::Filter, scaling::Scaling};
 use crate::outputs::Mode;
 use cairo::ImageSurface;
@@ -11,7 +13,7 @@ pub struct Image {
 }
 
 impl Image {
-    pub fn new(path: &str, scaling: Scaling, filter: Filter) -> Result<Self, ImageError> {
+    pub fn new(path: PathBuf, scaling: Scaling, filter: Filter) -> Result<Self, ImageError> {
         let image = image::open(path)?;
         let width = image.width();
         let height = image.height();

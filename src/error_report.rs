@@ -1,8 +1,4 @@
-use std::{
-    fmt::Display,
-    sync::RwLock,
-    rc::Rc,
-};
+use std::{fmt::Display, rc::Rc, sync::RwLock};
 
 use crate::{
     metadata::{Metadata, MetadataError},

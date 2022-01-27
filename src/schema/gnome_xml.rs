@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -18,13 +20,13 @@ pub enum Image {
         second: u32,
     },
     #[serde(rename = "static")]
-    Static { duration: f64, file: String },
+    Static { duration: f64, file: PathBuf },
     #[serde(rename = "transition")]
     Transition {
         #[serde(rename = "type")]
         kind: String,
         duration: f64,
-        from: String,
-        to: String,
+        from: PathBuf,
+        to: PathBuf,
     },
 }

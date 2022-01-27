@@ -1,7 +1,7 @@
 use getset::Getters;
+use std::rc::Rc;
 use std::sync::mpsc::Sender;
 use std::sync::RwLock;
-use std::rc::Rc;
 
 use wayland_client::protocol::wl_output;
 use wayland_client::protocol::wl_output::{Mode as ModeFlag, WlOutput};

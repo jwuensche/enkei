@@ -3,8 +3,8 @@ use log::debug;
 use metadata::MetadataError;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 
-use std::sync::{mpsc::channel, RwLock};
 use std::rc::Rc;
+use std::sync::{mpsc::channel, RwLock};
 
 use wayland_client::{protocol::wl_output, Display, GlobalManager};
 

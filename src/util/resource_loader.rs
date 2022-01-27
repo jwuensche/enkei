@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::outputs::Mode;
 
 use log::debug;
@@ -12,8 +14,8 @@ use cached::stores::SizedCache;
 use cached::Cached;
 
 pub struct ResourceLoader {
-    last_loaded: SizedCache<String, Image>,
-    scaled: SizedCache<(String, Mode), Vec<u8>>,
+    last_loaded: SizedCache<PathBuf, Image>,
+    scaled: SizedCache<(PathBuf, Mode), Vec<u8>>,
 }
 
 impl ResourceLoader {
@@ -24,37 +26,36 @@ impl ResourceLoader {
         }
     }
 
+    // TODO: Declonify this by changing the keys
     pub fn load(
         &mut self,
-        path: &str,
+        path: &PathBuf,
         mode: &Mode,
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Vec<u8>, ImageError> {
         // workaround as this introduces nastier non-lexical lifetimes
-        if self.scaled.cache_get(&(path.to_string(), *mode)).is_some() {
+        if self.scaled.cache_get(&(path.clone(), *mode)).is_some() {
             // The scaling and filter cannot differ
             debug!(
-                "Fetching scaled image from cache {{ path: {}, mode: {:?} }}",
+                "Fetching scaled image from cache {{ path: {:?}, mode: {:?} }}",
                 path, mode
             );
-            return Ok(self.scaled.cache_get(&(path.to_string(), *mode)).unwrap());
+            return Ok(self.scaled.cache_get(&(path.clone(), *mode)).unwrap());
         }
 
-        // uGH DiSgUsTiNg
-         if self.last_loaded.cache_get(&path.to_string()).is_none() {
-            let surface = Image::new(path, scaling, filter)?;
-             debug!("Caching image {{ path: {} }}", path);
-             self.last_loaded.cache_set(path.to_string(), surface);
+        if self.last_loaded.cache_get(&path).is_none() {
+            let surface = Image::new(path.clone(), scaling, filter)?;
+            debug!("Caching image {{ path: {:?} }}", path);
+            self.last_loaded.cache_set(path.clone(), surface);
         }
 
-        let surface = self.last_loaded.cache_get(&path.to_string()).expect("Cannot fail");
+        let surface = self.last_loaded.cache_get(&path).expect("Cannot fail");
         let surface_scaled = surface.process(mode)?;
-        self.scaled
-            .cache_set((path.to_string(), *mode), surface_scaled);
+        self.scaled.cache_set((path.clone(), *mode), surface_scaled);
         return Ok(self
             .scaled
-            .cache_get(&(path.to_string(), *mode))
+            .cache_get(&(path.clone(), *mode))
             .expect("Insertion was somehow misreported."));
     }
 }

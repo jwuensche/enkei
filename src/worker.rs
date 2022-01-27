@@ -92,15 +92,18 @@ pub fn work(
                         let height = *lock.mode().unwrap().height();
                         state.set_fps(*lock.mode().unwrap().refresh() as f64 / 1000f64);
                         drop(lock);
-                        state.renders.insert(id, OutputRendering::new(
-                            &compositor,
-                            &layers,
-                            &mut event_queue,
-                            Rc::clone(&output),
-                            egl_display,
-                            width as u32,
-                            height as u32,
-                        ));
+                        state.renders.insert(
+                            id,
+                            OutputRendering::new(
+                                &compositor,
+                                &layers,
+                                &mut event_queue,
+                                Rc::clone(&output),
+                                egl_display,
+                                width as u32,
+                                height as u32,
+                            ),
+                        );
                         let output = state.renders.get_mut(&id).expect("Cannot fail");
                         let animation_state = metadata.current()?;
                         refresh_output(
@@ -124,10 +127,7 @@ pub fn work(
                     debug!("Message: RemoveOutput {{ id: {} }}", id);
 
                     if let Some(output) = state.renders.remove(&id) {
-                        debug!(
-                            "Removing WlOuput Renderer {{ id: {} }}",
-                            output.output_id()
-                        );
+                        debug!("Removing WlOuput Renderer {{ id: {} }}", output.output_id());
                         output.destroy();
                     }
                 }

@@ -1,7 +1,7 @@
 use super::outputs::Output;
 use send_wrapper::SendWrapper;
-use std::sync::RwLock;
 use std::rc::Rc;
+use std::sync::RwLock;
 
 #[derive(Debug)]
 pub enum WorkerMessage {

@@ -10,8 +10,8 @@ use wayland_client::{
     EventQueue, Main,
 };
 
-use std::sync::RwLock;
 use std::rc::Rc;
+use std::sync::RwLock;
 
 use wayland_protocols::wlr::unstable::layer_shell::v1::client::zwlr_layer_shell_v1::{
     Layer, ZwlrLayerShellV1,

@@ -1,6 +1,7 @@
 use chrono::naive::{NaiveDate, NaiveDateTime};
 use chrono::Local;
 use std::fs::OpenOptions;
+use std::path::PathBuf;
 use std::{ops::Range, path::Path};
 use thiserror::Error;
 
@@ -52,16 +53,21 @@ impl MetadataReader {
         };
         let mut elapsed = 0f64;
 
-        let mut entry_iter = config.images.iter().peekable();
+        let mut entry_iter = config.images.iter().skip(1).peekable();
 
         while let Some(next) = entry_iter.next() {
-            let mut from_file = "".to_owned();
-            let mut duration_static = 0f64;
-            let mut duration_transition = 0f64;
+            let from_file;
+            let duration_static;
+            let mut duration_transition = 0_f64;
 
             if let Image::Static { duration, file } = &next {
                 duration_static = *duration;
                 from_file = file.clone();
+            } else {
+                return Err(MetadataError::CouldNotParse(format!(
+                    "Was expecting <static> block but found instead: {:#?}",
+                    next
+                )));
             }
 
             if let Some(Image::Transition {
@@ -107,14 +113,14 @@ impl MetadataReader {
     }
 
     // This is a workaround to create some basic description if only an image is given as a background
-    pub fn static_configuration(path: &str) -> Metadata {
+    pub fn static_configuration<P: Into<PathBuf>>(path: P) -> Metadata {
         Metadata {
             start_time: Local::now().naive_local(),
             total_duration_sec: f64::MAX,
             image_transisitons: vec![Transition::WithoutAnimation {
                 duration: f64::MAX / 1_000_000_000f64,
                 time_range: 0f64..f64::MAX,
-                from: path.to_string(),
+                from: path.into(),
             }],
         }
     }
@@ -127,13 +133,13 @@ pub enum Transition {
         duration_static: f64,
         duration_transition: f64,
         time_range: Range<f64>,
-        from: String,
-        to: String,
+        from: PathBuf,
+        to: PathBuf,
     },
     WithoutAnimation {
         duration: f64,
         time_range: Range<f64>,
-        from: String,
+        from: PathBuf,
     },
 }
 
@@ -171,14 +177,14 @@ impl Transition {
         }
     }
 
-    pub fn from(&self) -> &String {
+    pub fn from(&self) -> &PathBuf {
         match self {
             Transition::WithAnimation { from, .. } => from,
             Transition::WithoutAnimation { from, .. } => from,
         }
     }
 
-    pub fn to(&self) -> Option<&String> {
+    pub fn to(&self) -> Option<&PathBuf> {
         match self {
             Transition::WithAnimation { to, .. } => Some(to),
             Transition::WithoutAnimation { .. } => None,
