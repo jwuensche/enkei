@@ -213,6 +213,7 @@ fn state_draw(
 ) -> Result<bool, ApplicationError> {
     match animation_state {
         AnimationState::Static(progress, transition) => {
+            debug!("Current state is static {{ duration_static: {}, progress: {progress} }}", transition.duration_static());
             if transition.is_animated() && !ticker_active {
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),

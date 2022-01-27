@@ -7,6 +7,8 @@ use thiserror::Error;
 
 use crate::schema::gnome_xml::{Background, Image};
 
+const NANOS_PER_SEC: u32 = 1_000_000_000;
+
 pub struct MetadataReader {}
 
 #[derive(Error, Debug)]
@@ -118,7 +120,8 @@ impl MetadataReader {
             start_time: Local::now().naive_local(),
             total_duration_sec: f64::MAX,
             image_transisitons: vec![Transition::WithoutAnimation {
-                duration: f64::MAX / 1_000_000_000f64,
+                // Duration is given in nanoseconds in the std, we have to go a bit smaller than that to not panic
+                duration: (u64::MAX / 10) as f64,
                 time_range: 0f64..f64::MAX,
                 from: path.into(),
             }],
