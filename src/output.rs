@@ -34,7 +34,6 @@ pub struct OutputRendering {
     gl_context: glContext,
 }
 
-
 impl OutputRendering {
     pub fn new(
         compositor: &Main<WlCompositor>,
@@ -47,8 +46,9 @@ impl OutputRendering {
     ) -> Result<Self, ApplicationError> {
         let surface = compositor.create_surface();
         surface.commit();
-        let lock = output.read()
-                         .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
+        let lock = output
+            .read()
+            .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
         let output_id = lock.id();
         let background = layers.get_layer_surface(
             &surface,
@@ -92,7 +92,7 @@ impl OutputRendering {
             Some(egl_surface),
             Some(egl_context),
         )
-            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         egl.swap_interval(egl_display, 0)
             .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         surface.commit();
@@ -127,26 +127,36 @@ impl OutputRendering {
         })
     }
 
-    pub fn set_to<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) -> Result<(), ApplicationError> {
+    pub fn set_to<I: Into<i32>>(
+        &mut self,
+        image: &[u8],
+        width: I,
+        height: I,
+    ) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
             Some(self.egl_surface),
             Some(self.egl_context),
         )
-            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context.set_to(image, width.into(), height.into());
         Ok(())
     }
 
-    pub fn set_from<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) -> Result<(), ApplicationError> {
+    pub fn set_from<I: Into<i32>>(
+        &mut self,
+        image: &[u8],
+        width: I,
+        height: I,
+    ) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
             Some(self.egl_surface),
             Some(self.egl_context),
         )
-            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context.set_from(image, width.into(), height.into());
         Ok(())
     }
@@ -162,7 +172,7 @@ impl OutputRendering {
             Some(self.egl_surface),
             Some(self.egl_context),
         )
-            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context.draw(process);
         egl.swap_buffers(self.egl_display, self.egl_surface)
             .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;

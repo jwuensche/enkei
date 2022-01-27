@@ -41,16 +41,19 @@ impl ResourceLoader {
                 "Fetching scaled image from cache {{ path: {:?}, mode: {:?} }}",
                 path, mode
             );
-            return Ok(self.scaled.cache_get(&(path.clone(), *mode)).expect("Cannot fail"));
+            return Ok(self
+                .scaled
+                .cache_get(&(path.clone(), *mode))
+                .expect("Cannot fail"));
         }
 
-        if self.last_loaded.cache_get(&path).is_none() {
+        if self.last_loaded.cache_get(path).is_none() {
             let surface = Image::new(path.clone(), scaling, filter)?;
             debug!("Caching image {{ path: {:?} }}", path);
             self.last_loaded.cache_set(path.clone(), surface);
         }
 
-        let surface = self.last_loaded.cache_get(&path).expect("Cannot fail");
+        let surface = self.last_loaded.cache_get(path).expect("Cannot fail");
         let surface_scaled = surface.process(mode)?;
         self.scaled.cache_set((path.clone(), *mode), surface_scaled);
         return Ok(self

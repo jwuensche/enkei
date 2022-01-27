@@ -54,14 +54,18 @@ pub fn work(
         .map_err(ApplicationError::WaylandObject)?;
 
     // First define the layer shell interface and configure it before continuing
-    let layers = globals.instantiate_exact::<ZwlrLayerShellV1>(2)
+    let layers = globals
+        .instantiate_exact::<ZwlrLayerShellV1>(2)
         .map_err(ApplicationError::WaylandObject)?;
 
     // Create the egl surfaces here and setup the whole party, this should be taken into it's own module but for testing reasons
     // it can still be found here.
     egl.bind_api(egl::OPENGL_API)
         .expect("unable to select OpenGL API");
-    gl::load_with(|name| egl.get_proc_address(name).expect("Could not get process address. FATAL.") as *const std::ffi::c_void);
+    gl::load_with(|name| {
+        egl.get_proc_address(name)
+            .expect("Could not get process address. FATAL.") as *const std::ffi::c_void
+    });
     let egl_display = setup_egl(&display)?;
 
     // Use an output independent store for loaded images, allows for some reduction in IO time
@@ -84,8 +88,10 @@ pub fn work(
 
                     if state.renders.contains_key(&id) {
                         debug!("Output {{ id: {id} }} updated and not new.");
+                        // TODO: Check differing resolutions
                     } else {
-                        let lock = output.read()
+                        let lock = output
+                            .read()
                             .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
                         if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
                             debug!("Rendering on output {{ make: {}, model: {}, resolution: {}x{}, position: {}x{} }}", geo.make(), geo.model(), mode.width(), mode.height(), geo.x(), geo.y());
@@ -97,7 +103,7 @@ pub fn work(
                             height = *mode.height();
                             state.set_fps(*mode.refresh() as f64 / 1000f64);
                         } else {
-                            return Err(ApplicationError::OutputDataNotReady)
+                            return Err(ApplicationError::OutputDataNotReady);
                         }
                         drop(lock);
                         state.renders.insert(
@@ -252,8 +258,10 @@ fn refresh_output(
     scaling: Scaling,
     filter: Filter,
 ) -> Result<(), ApplicationError> {
-    let lock = output.output.read()
-                         .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
+    let lock = output
+        .output
+        .read()
+        .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
     let width;
     let height;
     let mode;
@@ -273,8 +281,7 @@ fn refresh_output(
         }
     };
 
-    let from = resources
-        .load(transition.from(), &mode, scaling, filter)?;
+    let from = resources.load(transition.from(), &mode, scaling, filter)?;
     let start = std::time::Instant::now();
     output.set_from(from, width, height)?;
     debug!(
@@ -282,8 +289,12 @@ fn refresh_output(
         start.elapsed().as_millis()
     );
     if transition.is_animated() {
-        let to = resources
-            .load(transition.to().expect("Cannot fail."), &mode, scaling, filter)?;
+        let to = resources.load(
+            transition.to().expect("Cannot fail."),
+            &mode,
+            scaling,
+            filter,
+        )?;
         output.set_to(to, width, height)?;
     } else {
         output.set_to(from, width, height)?;
@@ -297,7 +308,8 @@ use crate::output::OutputRendering;
 fn setup_egl(display: &Display) -> Result<egl::Display, ApplicationError> {
     let egl_display = egl
         .get_display(display.get_display_ptr() as *mut std::ffi::c_void)
-        .ok_or(ApplicationError::EGLSetup("Could not get EGL display.".into()))?;
-    egl.initialize(egl_display).map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        .ok_or_else(|| ApplicationError::EGLSetup("Could not get EGL display.".into()))?;
+    egl.initialize(egl_display)
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
     Ok(egl_display)
 }

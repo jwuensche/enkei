@@ -1,8 +1,8 @@
 use error_report::ErrorReport;
 use log::debug;
 use metadata::MetadataError;
-use wayland_client::{ConnectError, GlobalError};
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
+use wayland_client::{ConnectError, GlobalError};
 
 use std::rc::Rc;
 use std::sync::{mpsc::channel, RwLock};
@@ -72,7 +72,6 @@ impl ApplicationError {
     fn io_error(e: std::io::Error, line: u32, file: &str) -> ApplicationError {
         ApplicationError::Io(format!("{file}:{line}"), e)
     }
-
 
     fn egl_error(e: crate::EglError, line: u32, file: &str) -> ApplicationError {
         ApplicationError::EGL(format!("{file}:{line}"), e)
@@ -213,7 +212,8 @@ fn main() -> Result<(), ErrorReport> {
                 });
                 if let Some(valid) = pos.next() {
                     let _data = lock.swap_remove(valid);
-                    tx.send(messages::WorkerMessage::RemoveOutput(id)).expect(CB_ERR_MSG);
+                    tx.send(messages::WorkerMessage::RemoveOutput(id))
+                        .expect(CB_ERR_MSG);
                 }
             }
             _ => {}
@@ -258,7 +258,10 @@ fn main() -> Result<(), ErrorReport> {
     );
     if let Err(e) = result {
         let report: ErrorReport = e.into();
-        report.with_metadata(metadata).with_outputs(wl_outputs).report();
+        report
+            .with_metadata(metadata)
+            .with_outputs(wl_outputs)
+            .report();
         std::process::exit(1);
     }
     Ok(())
