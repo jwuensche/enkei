@@ -1,6 +1,7 @@
 use error_report::ErrorReport;
 use log::debug;
 use metadata::MetadataError;
+use wayland_client::{ConnectError, GlobalError};
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 
 use std::rc::Rc;
@@ -35,6 +36,7 @@ use egl::API as egl;
 use outputs::{handle_output_events, Output};
 
 use crate::image::scaling::{Filter, Scaling};
+use khronos_egl::Error as EglError;
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
@@ -46,6 +48,35 @@ pub enum ApplicationError {
     MetadataError(MetadataError),
     #[error("Could not determine data type, try to specify via --mode. Or check given file")]
     InvalidDataType,
+    #[error("Encountered an error while handling EGL - Location: `{0}` Cause: `{1}`")]
+    EGL(String, EglError),
+    #[error("EGL Setup failed: `{0}`")]
+    EGLSetup(String),
+    #[error("Could not lock data - Location: `{0}`")]
+    LockedOut(String),
+    #[error("Io Error: Location: `{0}` Cause: `{1}`")]
+    Io(String, std::io::Error),
+    #[error("Wayland Connection could not be established")]
+    WaylandConnection(ConnectError),
+    #[error("WaylandObject could not be initialized")]
+    WaylandObject(GlobalError),
+    #[error("Output Data was not ready, field value 'None' encountered")]
+    OutputDataNotReady,
+}
+
+impl ApplicationError {
+    fn locked_out(line: u32, file: &str) -> ApplicationError {
+        ApplicationError::LockedOut(format!("{file}:{line}"))
+    }
+
+    fn io_error(e: std::io::Error, line: u32, file: &str) -> ApplicationError {
+        ApplicationError::Io(format!("{file}:{line}"), e)
+    }
+
+
+    fn egl_error(e: crate::EglError, line: u32, file: &str) -> ApplicationError {
+        ApplicationError::EGL(format!("{file}:{line}"), e)
+    }
 }
 
 impl From<image::error::ImageError> for ApplicationError {
@@ -128,13 +159,15 @@ pub enum Mode {
     Dynamic,
 }
 
-fn main() {
+const CB_ERR_MSG: &str = "WlOutput Handler panicked. Cannot continue.";
+
+fn main() -> Result<(), ErrorReport> {
     let args = Args::parse();
     env_logger::init();
     /*
      * Setup display initials for wayland
      */
-    let display = Display::connect_to_env().unwrap();
+    let display = Display::connect_to_env().map_err(ApplicationError::WaylandConnection)?;
     let mut event_queue = display.create_event_queue();
     let attached_display = (*display).clone().attach(event_queue.token());
 
@@ -163,15 +196,15 @@ fn main() {
                 output.quick_assign(move |_, event, _| {
                     handle_output_events(&pass, event, &added, id);
                 });
-                let mut lock = pass_outputs.write().unwrap();
+                let mut lock = pass_outputs.write().expect(CB_ERR_MSG);
                 lock.push(new_output);
                 drop(lock);
             }
             GlobalEvent::Removed { id, interface } if interface == "wl_output" => {
                 debug!("Removing WlOutput Interface {{ id: {} }}", id);
-                let mut lock = pass_outputs.write().unwrap();
+                let mut lock = pass_outputs.write().expect(CB_ERR_MSG);
                 let mut pos = lock.iter().enumerate().filter_map(|elem| {
-                    let out = elem.1.read().unwrap();
+                    let out = elem.1.read().expect(CB_ERR_MSG);
                     if out.id() == id {
                         Some(elem.0)
                     } else {
@@ -180,7 +213,7 @@ fn main() {
                 });
                 if let Some(valid) = pos.next() {
                     let _data = lock.swap_remove(valid);
-                    tx.send(messages::WorkerMessage::RemoveOutput(id)).unwrap();
+                    tx.send(messages::WorkerMessage::RemoveOutput(id)).expect(CB_ERR_MSG);
                 }
             }
             _ => {}
@@ -189,23 +222,23 @@ fn main() {
 
     event_queue
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
-        .unwrap();
+        .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
     /*
      * Read Metadata or Prepare Static Mode
      */
     let metadata = {
         match args.mode {
-            Some(Mode::Static) => Ok(MetadataReader::static_configuration(&args.file)),
-            Some(Mode::Dynamic) => MetadataReader::read(args.file),
+            Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
+            Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
             None => {
                 if args.file.ends_with(".xml") {
-                    MetadataReader::read(args.file)
+                    MetadataReader::read(args.file)?
                 } else if regex_is_match!(
                     r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
                     &args.file
                 ) {
-                    Ok(MetadataReader::static_configuration(&args.file))
+                    MetadataReader::static_configuration(&args.file)
                 } else {
                     let error = ErrorReport::new(ApplicationError::InvalidDataType);
                     error.report();
@@ -215,24 +248,18 @@ fn main() {
         }
     };
 
-    if let Ok(meta) = metadata {
-        let result = worker::work(
-            globals,
-            display,
-            message_rx,
-            message_tx,
-            event_queue,
-            meta.clone(),
-        );
-        if let Err(e) = result {
-            let report: ErrorReport = e.into();
-            report.with_metadata(meta).with_outputs(wl_outputs).report();
-            std::process::exit(1);
-        }
-    } else {
-        let report: ErrorReport = metadata.unwrap_err().into();
-        report.report();
+    let result = worker::work(
+        globals,
+        display,
+        message_rx,
+        message_tx,
+        event_queue,
+        metadata.clone(),
+    );
+    if let Err(e) = result {
+        let report: ErrorReport = e.into();
+        report.with_metadata(metadata).with_outputs(wl_outputs).report();
         std::process::exit(1);
     }
-    std::process::exit(0);
+    Ok(())
 }

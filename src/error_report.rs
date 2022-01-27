@@ -52,9 +52,7 @@ impl ErrorReport {
     fn marginal_error(&self) {
         eprintln!("Error: {}", self.error);
     }
-}
 
-impl Display for ErrorReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(ERROR_HEADER)?;
         f.write_fmt(format_args!("Cause: {}\n\n", self.error))?;
@@ -69,6 +67,20 @@ impl Display for ErrorReport {
             f.write_str("Image Metadata: Unavailable\n")?;
         }
         Ok(())
+    }
+}
+
+impl Display for ErrorReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
+    }
+}
+
+use std::fmt::Debug;
+
+impl Debug for ErrorReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt(f)
     }
 }
 

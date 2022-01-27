@@ -114,8 +114,7 @@ pub fn handle_output_events(
             .send(WorkerMessage::AddOutput(
                 SendWrapper::new(Rc::clone(pass)),
                 id,
-            ))
-            .unwrap(),
+            )).expect("Handler failed and had to be aborted."),
         _ => unreachable!(),
     }
 }

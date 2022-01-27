@@ -1,3 +1,5 @@
+use crate::ApplicationError;
+
 use super::outputs::Output;
 use khronos_egl::{Context as eglContext, Display as eglDisplay, Surface as eglSurface};
 use wayland_egl::WlEglSurface;
@@ -32,6 +34,7 @@ pub struct OutputRendering {
     gl_context: glContext,
 }
 
+
 impl OutputRendering {
     pub fn new(
         compositor: &Main<WlCompositor>,
@@ -41,10 +44,11 @@ impl OutputRendering {
         egl_display: eglDisplay,
         buf_x: u32,
         buf_y: u32,
-    ) -> Self {
+    ) -> Result<Self, ApplicationError> {
         let surface = compositor.create_surface();
         surface.commit();
-        let lock = output.read().unwrap();
+        let lock = output.read()
+                         .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
         let output_id = lock.id();
         let background = layers.get_layer_surface(
             &surface,
@@ -69,10 +73,10 @@ impl OutputRendering {
         surface.commit();
         event_queue
             .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
-            .unwrap();
+            .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
         let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, buf_x as i32, buf_y as i32);
-        let (egl_context, egl_config) = create_context(egl_display);
+        let (egl_context, egl_config) = create_context(egl_display)?;
         let egl_surface = unsafe {
             egl.create_window_surface(
                 egl_display,
@@ -80,7 +84,7 @@ impl OutputRendering {
                 wl_egl_surface.ptr() as egl::NativeWindowType,
                 None,
             )
-            .unwrap()
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?
         };
         egl.make_current(
             egl_display,
@@ -88,13 +92,15 @@ impl OutputRendering {
             Some(egl_surface),
             Some(egl_context),
         )
-        .unwrap();
-        egl.swap_interval(egl_display, 0).unwrap();
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        egl.swap_interval(egl_display, 0)
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         surface.commit();
         // Rendering with the `gl` bindings are all unsafe let's block this away
         let context = super::opengl::context::Context::new();
         // Make the buffer the current one
-        egl.swap_buffers(egl_display, egl_surface).unwrap();
+        egl.swap_buffers(egl_display, egl_surface)
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         surface.commit();
 
         let input = compositor.create_region();
@@ -103,13 +109,13 @@ impl OutputRendering {
 
         event_queue
             .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
-            .unwrap();
+            .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
         surface.damage(0, 0, i32::max_value(), i32::max_value());
         surface.commit();
 
         drop(lock);
-        OutputRendering {
+        Ok(OutputRendering {
             output,
             output_id,
             surface,
@@ -118,53 +124,64 @@ impl OutputRendering {
             egl_display,
             egl_surface,
             gl_context: context,
-        }
+        })
     }
 
-    pub fn set_to<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) {
-        self.gl_context.set_to(image, width.into(), height.into())
-    }
-
-    pub fn set_from<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) {
+    pub fn set_to<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
             Some(self.egl_surface),
             Some(self.egl_context),
         )
-        .unwrap();
-        self.gl_context.set_from(image, width.into(), height.into())
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        self.gl_context.set_to(image, width.into(), height.into());
+        Ok(())
+    }
+
+    pub fn set_from<I: Into<i32>>(&mut self, image: &[u8], width: I, height: I) -> Result<(), ApplicationError> {
+        egl.make_current(
+            self.egl_display,
+            Some(self.egl_surface),
+            Some(self.egl_surface),
+            Some(self.egl_context),
+        )
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        self.gl_context.set_from(image, width.into(), height.into());
+        Ok(())
     }
 
     pub fn output_id(&self) -> u32 {
         self.output_id
     }
 
-    pub fn draw(&self, process: f32) {
+    pub fn draw(&self, process: f32) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
             Some(self.egl_surface),
             Some(self.egl_context),
         )
-        .unwrap();
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context.draw(process);
         egl.swap_buffers(self.egl_display, self.egl_surface)
-            .unwrap();
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.surface.commit();
+        Ok(())
     }
 
-    pub fn destroy(&self) {
+    pub fn destroy(&self) -> Result<(), ApplicationError> {
         self.surface.destroy();
         egl.destroy_surface(self.egl_display, self.egl_surface)
-            .expect("EGL surface could not be destroyed");
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         egl.destroy_context(self.egl_display, self.egl_context)
-            .expect("EGL context could not be destroyed");
+            .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         // self.gl_context.destroy();
+        Ok(())
     }
 }
 
-fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
+fn create_context(display: egl::Display) -> Result<(egl::Context, egl::Config), ApplicationError> {
     let attributes = [
         egl::RED_SIZE,
         8,
@@ -177,8 +194,8 @@ fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
 
     let config = egl
         .choose_first_config(display, &attributes)
-        .expect("unable to choose an EGL configuration")
-        .expect("no EGL configuration found");
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?
+        .ok_or_else(|| ApplicationError::egl_error(crate::EglError::BadAccess, line!(), file!()))?;
 
     let context_attributes = [
         egl::CONTEXT_MAJOR_VERSION,
@@ -192,7 +209,7 @@ fn create_context(display: egl::Display) -> (egl::Context, egl::Config) {
 
     let context = egl
         .create_context(display, config, None, &context_attributes)
-        .expect("unable to create an EGL context");
+        .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
 
-    (context, config)
+    Ok((context, config))
 }

@@ -41,7 +41,7 @@ impl ResourceLoader {
                 "Fetching scaled image from cache {{ path: {:?}, mode: {:?} }}",
                 path, mode
             );
-            return Ok(self.scaled.cache_get(&(path.clone(), *mode)).unwrap());
+            return Ok(self.scaled.cache_get(&(path.clone(), *mode)).expect("Cannot fail"));
         }
 
         if self.last_loaded.cache_get(&path).is_none() {
@@ -56,6 +56,6 @@ impl ResourceLoader {
         return Ok(self
             .scaled
             .cache_get(&(path.clone(), *mode))
-            .expect("Insertion was somehow misreported."));
+            .expect("Cannot fail"));
     }
 }
