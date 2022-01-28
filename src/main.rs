@@ -237,7 +237,9 @@ fn main() -> Result<(), ErrorReport> {
             Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
             Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
             None => {
-                if args.file.ends_with(".xml") {
+                debug!("Checking path {{ {:?} }}", &args.file);
+                let extension = args.file.extension();
+                if extension.is_some() && extension.unwrap() == "xml" {
                     MetadataReader::read(args.file)?
                 } else if regex_is_match!(
                     r"\.(?i)(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
