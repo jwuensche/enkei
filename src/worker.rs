@@ -87,8 +87,26 @@ pub fn work(
                     debug!("Message: AddOutput {{ id: {} }}", id);
 
                     if state.renders.contains_key(&id) {
-                        debug!("Output {{ id: {id} }} updated and not new.");
-                        // TODO: Check differing resolutions
+                        debug!("Output {{ id: {id} }} updated and not new. Refreshing.");
+
+                        if let Some(o) = state.renders.get(&id) {
+                            let lock = output
+                                .read()
+                                .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
+                            let c = lock.mode().cloned();
+                            drop(lock);
+                            if let Some(mode) = c {
+                                if o.resolution != (*mode.width() as u32, *mode.height() as u32) {
+                                    debug!("Resolution for Output {{ id: {id} }}, has changed");
+                                    // On Change we have to reinitialize the output, though this needs
+                                    // to be a complete reinit with all surfaces so for simplicity we
+                                    // "destroy" the output here and add it anew.
+                                    senders.send(WorkerMessage::RemoveOutput(id)).expect("Cannot fail");
+                                    senders.send(WorkerMessage::AddOutput(output, id)).expect("Cannot fail");
+                                }
+                            }
+                        }
+
                     } else {
                         let lock = output
                             .read()

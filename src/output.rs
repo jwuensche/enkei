@@ -32,6 +32,7 @@ pub struct OutputRendering {
     _wl_egl_surface: WlEglSurface,
     egl_surface: eglSurface,
     gl_context: glContext,
+    pub resolution: (u32, u32),
 }
 
 impl OutputRendering {
@@ -124,6 +125,7 @@ impl OutputRendering {
             egl_display,
             egl_surface,
             gl_context: context,
+            resolution: (buf_x,buf_y),
         })
     }
 
