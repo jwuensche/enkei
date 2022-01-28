@@ -240,7 +240,7 @@ fn main() -> Result<(), ErrorReport> {
                 if args.file.ends_with(".xml") {
                     MetadataReader::read(args.file)?
                 } else if regex_is_match!(
-                    r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
+                    r"\.(?i)(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
                     args.file.to_str().expect("Could not deciper given path")
                 ) {
                     MetadataReader::static_configuration(&args.file)
