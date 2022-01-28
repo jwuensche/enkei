@@ -234,6 +234,7 @@ fn state_draw(
         }
         AnimationState::Transition(progress, transition) => {
             // This state is always animated
+            debug!("Current state is dynamic {{ duration_transition: {}, progress: {progress} }}", transition.duration_transition());
             let count = calc_frame_updates(transition.duration_transition(), fps);
             let step = transition.duration_transition() / count;
             let finished = progress / step;

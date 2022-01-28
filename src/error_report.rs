@@ -41,16 +41,9 @@ impl ErrorReport {
         self
     }
 
-    pub fn report(self) {
-        match &self.error {
-            ApplicationError::InvalidDataType => self.marginal_error(),
-            _ => eprintln!("{}", self),
-        }
-    }
-
     /// This method is for the cases when the error is of minor scale and probably due to some user error (typos etc.)
-    fn marginal_error(&self) {
-        eprintln!("Error: {}", self.error);
+    fn marginal_error(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.error))
     }
 
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -80,7 +73,10 @@ use std::fmt::Debug;
 
 impl Debug for ErrorReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.fmt(f)
+        match &self.error {
+            ApplicationError::InvalidDataType | ApplicationError::NotAFile(_) => self.marginal_error(f),
+            _ => self.fmt(f),
+        }
     }
 }
 

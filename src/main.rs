@@ -4,6 +4,7 @@ use metadata::MetadataError;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 use wayland_client::{ConnectError, GlobalError};
 
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{mpsc::channel, RwLock};
 
@@ -40,8 +41,6 @@ use khronos_egl::Error as EglError;
 
 #[derive(Error, Debug)]
 pub enum ApplicationError {
-    #[error("Could not access the member `{0}` in some struct.")]
-    AccessError(String),
     #[error("Image Processing failed: `{0}`")]
     ErrorWhileImageProcessing(ImageError),
     #[error("Reading of metadata failed: `{0}`")]
@@ -62,6 +61,9 @@ pub enum ApplicationError {
     WaylandObject(GlobalError),
     #[error("Output Data was not ready, field value 'None' encountered")]
     OutputDataNotReady,
+    #[error("The path `{0}` is not a file or does not exist")]
+    NotAFile(PathBuf)
+
 }
 
 impl ApplicationError {
@@ -117,7 +119,7 @@ struct Args {
         takes_value = true,
         required = true,
     )]
-    file: String,
+    file: PathBuf,
     #[clap(
         arg_enum,
         short = 'f',
@@ -224,9 +226,12 @@ fn main() -> Result<(), ErrorReport> {
         .sync_roundtrip(&mut (), |_, _, _| unreachable!())
         .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
-    /*
-     * Read Metadata or Prepare Static Mode
-     */
+    // Preliminary check for file existence for better errors
+    if !args.file.is_file() {
+        return Err(ApplicationError::NotAFile(args.file).into());
+    }
+
+    // Read Metadata or Prepare Static Mode
     let metadata = {
         match args.mode {
             Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
@@ -236,13 +241,11 @@ fn main() -> Result<(), ErrorReport> {
                     MetadataReader::read(args.file)?
                 } else if regex_is_match!(
                     r"\.(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
-                    &args.file
+                    args.file.to_str().expect("Could not deciper given path")
                 ) {
                     MetadataReader::static_configuration(&args.file)
                 } else {
-                    let error = ErrorReport::new(ApplicationError::InvalidDataType);
-                    error.report();
-                    std::process::exit(1);
+                    return Err(ErrorReport::new(ApplicationError::InvalidDataType));
                 }
             }
         }
@@ -257,12 +260,10 @@ fn main() -> Result<(), ErrorReport> {
         metadata.clone(),
     );
     if let Err(e) = result {
-        let report: ErrorReport = e.into();
-        report
+        let report: ErrorReport = ErrorReport::from(e)
             .with_metadata(metadata)
-            .with_outputs(wl_outputs)
-            .report();
-        std::process::exit(1);
+            .with_outputs(wl_outputs);
+        return Err(report);
     }
     Ok(())
 }
