@@ -26,7 +26,6 @@ impl ResourceLoader {
         }
     }
 
-    // TODO: Declonify this by changing the keys
     pub fn load(
         &mut self,
         path: &PathBuf,
@@ -34,8 +33,9 @@ impl ResourceLoader {
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Vec<u8>, ImageError> {
+        let scale_key = (path.clone(), *mode);
         // workaround as this introduces nastier non-lexical lifetimes
-        if self.scaled.cache_get(&(path.clone(), *mode)).is_some() {
+        if self.scaled.cache_get(&scale_key).is_some() {
             // The scaling and filter cannot differ
             debug!(
                 "Fetching scaled image from cache {{ path: {:?}, mode: {:?} }}",
@@ -43,7 +43,7 @@ impl ResourceLoader {
             );
             return Ok(self
                 .scaled
-                .cache_get(&(path.clone(), *mode))
+                .cache_get(&scale_key)
                 .expect("Cannot fail"));
         }
 
@@ -55,10 +55,10 @@ impl ResourceLoader {
 
         let surface = self.last_loaded.cache_get(path).expect("Cannot fail");
         let surface_scaled = surface.process(mode)?;
-        self.scaled.cache_set((path.clone(), *mode), surface_scaled);
+        self.scaled.cache_set(scale_key.clone(), surface_scaled);
         return Ok(self
             .scaled
-            .cache_get(&(path.clone(), *mode))
+            .cache_get(&scale_key)
             .expect("Cannot fail"));
     }
 }
