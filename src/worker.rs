@@ -144,8 +144,7 @@ pub fn work(
                             &animation_state,
                             Scaling::Fill,
                             Filter::Best,
-                        )
-                        .expect("Could not refresh");
+                        )?;
                         state.ticker_active = state_draw(
                             &animation_state,
                             output,
@@ -198,8 +197,7 @@ pub fn work(
                             &animation_state,
                             Scaling::Fill,
                             Filter::Best,
-                        )
-                        .expect("Could not refresh");
+                        )?;
                         state.ticker_active = state_draw(
                             &animation_state,
                             output,
