@@ -58,14 +58,6 @@ pub fn work(
         .instantiate_exact::<ZwlrLayerShellV1>(2)
         .map_err(ApplicationError::WaylandObject)?;
 
-    // Create the egl surfaces here and setup the whole party, this should be taken into it's own module but for testing reasons
-    // it can still be found here.
-    egl.bind_api(egl::OPENGL_API)
-        .expect("unable to select OpenGL API");
-    gl::load_with(|name| {
-        egl.get_proc_address(name)
-            .expect("Could not get process address. FATAL.") as *const std::ffi::c_void
-    });
     let egl_display = setup_egl(&display)?;
 
     // Use an output independent store for loaded images, allows for some reduction in IO time
@@ -324,6 +316,13 @@ use crate::egl;
 use crate::output::OutputRendering;
 
 fn setup_egl(display: &Display) -> Result<egl::Display, ApplicationError> {
+    egl.bind_api(egl::OPENGL_API)
+        .expect("unable to select OpenGL API");
+    gl::load_with(|name| {
+        egl.get_proc_address(name)
+            .expect("Could not get process address. FATAL.") as *const std::ffi::c_void
+    });
+
     let egl_display = egl
         .get_display(display.get_display_ptr() as *mut std::ffi::c_void)
         .ok_or_else(|| ApplicationError::EGLSetup("Could not get EGL display.".into()))?;
