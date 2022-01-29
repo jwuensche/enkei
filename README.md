@@ -73,7 +73,10 @@ mesa-libEGL-devel
 glib2-devel
 cairo-devel
 cairo-gobject-devel
+libwebp-devel
 ```
+
+These are the package names on Fedora, for your favorite distribution they might differ.
 
 ### Building the project
 
