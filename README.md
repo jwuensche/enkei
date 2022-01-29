@@ -109,6 +109,7 @@ $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
 ## Related Projects
 
 - [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
+- [dynamic-wallpaper-editor](https://github.com/maoschanz/dynamic-wallpaper-editor)
 - [swaybg](https://github.com/swaywm/swaybg)
 - [mpvpaper](https://github.com/GhostNaN/mpvpaper)
 - [oguri](https://github.com/vilhalmer/oguri)
