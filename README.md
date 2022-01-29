@@ -1,38 +1,42 @@
-# enkei
-<a href="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/"><img src="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/status_image/last_build.png" /></a>
+# enkei <a href="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/"><img src="https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/package/enkei/status_image/last_build.png" /></a>
+<a href="https://liberapay.com/spacesnek/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
 
-A wayland wallpaper tool with support for Gnome dynamic wallpapers.
-The main motivation behind `enkei` is to display dynamic wallpapers compatible with the
-Gnome wallpaper specification.
+`enkei` is a wallpaper tool created to allow displaying dynamic wallpapers based on the specification format used for example in the `Gnome` desktop environment.
+It is designed to offer a _smooth_ transition between wallpapers and gradual change over long and short periods of time.
+For a fast handling `enkei` uses `OpenGL` to render images and blending them for transitions.
 
-<video width="100%" controls muted loop alt="A video showing a sped up desktop with enkei running.">
+Writing a wallpaper tool is nothing new so there are other projects which are similar.
+There are already solutions for [animating GIFs](https://github.com/vilhalmer/oguri), [videos](https://github.com/GhostNaN/mpvpaper), [timed](https://github.com/xyproto/wallutils), and [static](https://github.com/swaywm/swaybg) wallpapers in Wayland.
+But the use cases were quite different from what I wanted or I wasn't happy with their handling of animations, so I started writing `enkei`.
+
+<video width="100%" controls muted loop alt="A video showing enkei running on my laptop.">
   <source src="data/demo.webm" type="video/webm">
 </video>
 
 ## Features
 
-- [X] Show Static Image
+- [X] Show Static Wallpapers
 - [X] Show Dynamic Wallpapers
-- [X] Set Different Scaling Modes
-- [X] Set Wallpaper Filter Algorithm
-- [X] Most common image formats supported (PNG, JPG, TIF,...)
+- [x] Scale images to fill and fit
+- [X] Filter images after scaling to improve visuals
+- [X] Support most common image formats (PNG, JPEG, WEBP, BMP,...)
 
-> Under the hood we use [image](https://crates.io/crates/image) which provides the most common image types, have a look on their documentation
+> Under the hood we use [image](https://crates.io/crates/image) and [webp](https://github.com/jaredforth/webp) which provide the most common image types.
 
 ## Compositor Requirements
 
 This tool can generally be used with all compositor implementing the core protocols and the following protocols:
 
-- [wlr-layer-shell](https://wayland.app/protocols/wlr-layer-shell-unstable-v1)
+- [wlr-layer-shell-unstable-v1](https://gitlab.freedesktop.org/wlroots/wlr-protocols/-/blob/master/unstable/wlr-layer-shell-unstable-v1.xml)
 
-These are most of the time wlroots based compositors for example:
+These are most of the time `wlroots` based compositors for example:
 
 - [Sway](https://swaywm.org/)
 - [Wayfire](https://wayfire.org/)
 - [hikari](https://hikari.acmelabs.space/)
 - [dwl](https://github.com/djpohly/dwl)
 
-and many more check an uncomplete list here: https://github.com/solarkraft/awesome-wlroots#compositors
+and many more; check an incomplete list here: https://github.com/solarkraft/awesome-wlroots#compositors
 
 ## Options
 
@@ -88,13 +92,13 @@ $ cargo build
 
 ### Installing from Local Build
 
-You can either install `enkei` via a cargo, to your `$CARGO_BIN` directory
+You can either install `enkei` via cargo, to your `$CARGO_BIN` directory
 
 ``` sh
 $ cargo install --path .
 ```
 
-or to any other arbitrary directory in your path e.g. `/usr/local/bin`.
+or to any other arbitrary directory in your `$PATH` e.g. `/usr/local/bin`
 
 ``` sh
 $ cargo build --release
@@ -104,26 +108,22 @@ $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
 
 ## Related Projects
 
+- [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
 - [swaybg](https://github.com/swaywm/swaybg)
 - [mpvpaper](https://github.com/GhostNaN/mpvpaper)
 - [oguri](https://github.com/vilhalmer/oguri)
-- [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
 
 ## Feature Ideas
   
 - [ ] Allow setting of wallpapers via IPC
 
     > A nice to have would be to send messages to the already running enkei
-    > instance to change the wallpaper shown.  For this we would need to
-    > interrupt any ongoing animations or static images and hot-swap the images
-    > in the current gtk session.
-
-    > oguri has done something similar seems like a cool feature to have to
+    > instance to change the wallpaper shown.
+    > `oguri` has done something similar seems like a cool feature to have to
     > avoid respawning the application.
     
 - [ ] Individual wallpapers on different displays
 
     > The base functionality for this is already present, as each output is
-    > treated individually. But higher logic and interface is missing to
-    > realize this.  This goes hand in hand with being able to choose on which
-    > display you want to display a wallpaper. Maybe not all should be set.
+    > treated individually. But logic and interface is missing to
+    > realize this.
