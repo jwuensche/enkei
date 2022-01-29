@@ -1,4 +1,8 @@
-use std::sync::mpsc::{Receiver, Sender};
+use crossbeam_channel::{
+    Sender,
+    Receiver,
+    unbounded,
+};
 
 use std::rc::Rc;
 
@@ -17,18 +21,25 @@ use crate::watchdog::timer;
 use crate::ApplicationError;
 use std::collections::HashMap;
 
+
+
 pub struct State {
     fps: f64,
     ticker_active: bool,
     renders: HashMap<u32, OutputRendering>,
+    stop_all_timers: Sender<()>,
+    timer_receiver: Receiver<()>,
 }
 
 impl State {
     fn new() -> Self {
+        let (tx, rx) = unbounded();
         Self {
             fps: 1f64,
             ticker_active: false,
             renders: HashMap::new(),
+            stop_all_timers: tx,
+            timer_receiver: rx,
         }
     }
 
@@ -143,6 +154,7 @@ pub fn work(
                             state.ticker_active,
                             state.fps,
                             senders.clone(),
+                            state.timer_receiver.clone(),
                         )?;
                     }
                 }
@@ -174,13 +186,16 @@ pub fn work(
                         count as u64,
                         0,
                         senders.clone(),
+                        state.timer_receiver.clone(),
                     );
                 }
                 WorkerMessage::Refresh => {
                     debug!("Message: Refresh");
                     let start = std::time::Instant::now();
                     state.ticker_active = false;
-                    // TODO: Cancel all running timer watchdogs
+                    state.stop_all_timers.send(()).expect("Cannot fail");
+                    // drain the current channel
+                    while let Ok(_) = state.timer_receiver.try_recv() { }
                     let animation_state = metadata.current()?;
                     for (_, output) in state.renders.iter_mut() {
                         refresh_output(
@@ -196,6 +211,7 @@ pub fn work(
                             state.ticker_active,
                             state.fps,
                             senders.clone(),
+                            state.timer_receiver.clone(),
                         )?;
                     }
                     debug!(
@@ -218,6 +234,7 @@ fn state_draw(
     mut ticker_active: bool,
     fps: f64,
     senders: Sender<WorkerMessage>,
+    recv: Receiver<()>,
 ) -> Result<bool, ApplicationError> {
     match animation_state {
         AnimationState::Static(progress, transition) => {
@@ -226,6 +243,7 @@ fn state_draw(
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,
+                    recv,
                     WorkerMessage::AnimationStart(transition.duration_transition()),
                 );
                 ticker_active = true;
@@ -233,6 +251,7 @@ fn state_draw(
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
                     senders,
+                    recv,
                     WorkerMessage::Refresh,
                 );
                 ticker_active = true;
@@ -252,6 +271,7 @@ fn state_draw(
                     count as u64,
                     finished as u64,
                     senders,
+                    recv,
                 );
                 ticker_active = true;
             }

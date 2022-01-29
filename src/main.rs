@@ -6,7 +6,8 @@ use wayland_client::{ConnectError, GlobalError};
 
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::sync::{mpsc::channel, RwLock};
+use std::sync::RwLock;
+use crossbeam_channel::unbounded;
 
 use wayland_client::{protocol::wl_output, Display, GlobalManager};
 
@@ -175,7 +176,7 @@ fn main() -> Result<(), ErrorReport> {
     let wl_outputs = Rc::new(RwLock::new(Vec::new()));
     let pass_outputs = Rc::clone(&wl_outputs);
 
-    let (message_tx, message_rx) = channel();
+    let (message_tx, message_rx) = unbounded();
     let tx = message_tx.clone();
 
     let globals = GlobalManager::new_with_cb(

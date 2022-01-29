@@ -1,7 +1,10 @@
+use crossbeam_channel::{
+    Receiver,
+    Sender,
+};
 use log::debug;
 
 use crate::messages::WorkerMessage;
-use std::sync::mpsc::Sender;
 
 const ERROR_MSG: &str = "Could not send timer tick. Is the other side already dropped?";
 
@@ -10,6 +13,7 @@ pub fn spawn_animation_ticker(
     count: u64,
     mut finished: u64,
     tx: Sender<WorkerMessage>,
+    rx: Receiver<()>,
 ) {
     debug!(
         "Spawning Ticker {{ step_duration: {}s, count: {}, offset: {} }}",
@@ -20,6 +24,9 @@ pub fn spawn_animation_ticker(
     tx.send(WorkerMessage::AnimationStep(finished as f32 / count as f32))
         .expect(ERROR_MSG);
     std::thread::spawn(move || loop {
+        if rx.try_recv().is_ok() {
+            break;
+        }
         tx.send(WorkerMessage::AnimationStep(finished as f32 / count as f32))
             .expect(ERROR_MSG);
         if finished >= count {
@@ -33,6 +40,7 @@ pub fn spawn_animation_ticker(
 pub fn spawn_simple_timer(
     duration: std::time::Duration,
     tx: Sender<WorkerMessage>,
+    rx: Receiver<()>,
     msg: WorkerMessage,
 ) {
     debug!(
@@ -42,6 +50,9 @@ pub fn spawn_simple_timer(
     );
     std::thread::spawn(move || {
         std::thread::sleep(duration);
+        if rx.try_recv().is_ok() {
+            return;
+        }
         tx.send(msg).expect(ERROR_MSG);
     });
 }

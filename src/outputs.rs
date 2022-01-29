@@ -1,6 +1,6 @@
 use getset::Getters;
 use std::rc::Rc;
-use std::sync::mpsc::Sender;
+use crossbeam_channel::Sender;
 use std::sync::RwLock;
 
 use wayland_client::protocol::wl_output;

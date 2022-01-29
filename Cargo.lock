@@ -352,6 +352,7 @@ dependencies = [
  "cairo-rs",
  "chrono",
  "clap",
+ "crossbeam-channel",
  "env_logger",
  "ezing",
  "getset",
