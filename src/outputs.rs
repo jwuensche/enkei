@@ -1,6 +1,6 @@
+use crossbeam_channel::Sender;
 use getset::Getters;
 use std::rc::Rc;
-use crossbeam_channel::Sender;
 use std::sync::RwLock;
 
 use wayland_client::protocol::wl_output;

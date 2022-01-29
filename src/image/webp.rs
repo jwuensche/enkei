@@ -1,8 +1,8 @@
 // Add extra decoder function to webp images as `image` does not support most common formats
 
-use std::{path::Path, io::Read};
-use image::{DynamicImage, GenericImageView};
+use image::DynamicImage;
 use log::debug;
+use std::{io::Read, path::Path};
 
 use super::error::ImageError;
 

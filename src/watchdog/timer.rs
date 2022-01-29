@@ -1,7 +1,4 @@
-use crossbeam_channel::{
-    Receiver,
-    Sender,
-};
+use crossbeam_channel::{Receiver, Sender};
 use log::debug;
 
 use crate::messages::WorkerMessage;

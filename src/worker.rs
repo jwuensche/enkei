@@ -1,8 +1,4 @@
-use crossbeam_channel::{
-    Sender,
-    Receiver,
-    unbounded,
-};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 
 use std::rc::Rc;
 
@@ -20,8 +16,6 @@ use crate::util::ResourceLoader;
 use crate::watchdog::timer;
 use crate::ApplicationError;
 use std::collections::HashMap;
-
-
 
 pub struct State {
     fps: f64,
@@ -104,12 +98,15 @@ pub fn work(
                                     // On Change we have to reinitialize the output, though this needs
                                     // to be a complete reinit with all surfaces so for simplicity we
                                     // "destroy" the output here and add it anew.
-                                    senders.send(WorkerMessage::RemoveOutput(id)).expect("Cannot fail");
-                                    senders.send(WorkerMessage::AddOutput(output, id)).expect("Cannot fail");
+                                    senders
+                                        .send(WorkerMessage::RemoveOutput(id))
+                                        .expect("Cannot fail");
+                                    senders
+                                        .send(WorkerMessage::AddOutput(output, id))
+                                        .expect("Cannot fail");
                                 }
                             }
                         }
-
                     } else {
                         let lock = output
                             .read()
@@ -195,7 +192,7 @@ pub fn work(
                     state.ticker_active = false;
                     state.stop_all_timers.send(()).expect("Cannot fail");
                     // drain the current channel
-                    while let Ok(_) = state.timer_receiver.try_recv() { }
+                    while let Ok(_) = state.timer_receiver.try_recv() {}
                     let animation_state = metadata.current()?;
                     for (_, output) in state.renders.iter_mut() {
                         refresh_output(
@@ -238,7 +235,10 @@ fn state_draw(
 ) -> Result<bool, ApplicationError> {
     match animation_state {
         AnimationState::Static(progress, transition) => {
-            debug!("Current state is static {{ duration_static: {}, progress: {progress} }}", transition.duration_static());
+            debug!(
+                "Current state is static {{ duration_static: {}, progress: {progress} }}",
+                transition.duration_static()
+            );
             if transition.is_animated() && !ticker_active {
                 timer::spawn_simple_timer(
                     std::time::Duration::from_secs_f64(transition.duration_static() - progress),
@@ -261,7 +261,10 @@ fn state_draw(
         }
         AnimationState::Transition(progress, transition) => {
             // This state is always animated
-            debug!("Current state is dynamic {{ duration_transition: {}, progress: {progress} }}", transition.duration_transition());
+            debug!(
+                "Current state is dynamic {{ duration_transition: {}, progress: {progress} }}",
+                transition.duration_transition()
+            );
             let count = calc_frame_updates(transition.duration_transition(), fps);
             let step = transition.duration_transition() / count;
             let finished = progress / step;

@@ -74,7 +74,9 @@ use std::fmt::Debug;
 impl Debug for ErrorReport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.error {
-            ApplicationError::InvalidDataType | ApplicationError::NotAFile(_) => self.marginal_error(f),
+            ApplicationError::InvalidDataType | ApplicationError::NotAFile(_) => {
+                self.marginal_error(f)
+            }
             _ => self.fmt(f),
         }
     }

@@ -4,10 +4,10 @@ use metadata::MetadataError;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 use wayland_client::{ConnectError, GlobalError};
 
+use crossbeam_channel::unbounded;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::RwLock;
-use crossbeam_channel::unbounded;
 
 use wayland_client::{protocol::wl_output, Display, GlobalManager};
 
@@ -63,8 +63,7 @@ pub enum ApplicationError {
     #[error("Output Data was not ready, field value 'None' encountered")]
     OutputDataNotReady,
     #[error("The path `{0}` is not a file or does not exist")]
-    NotAFile(PathBuf)
-
+    NotAFile(PathBuf),
 }
 
 impl ApplicationError {

@@ -125,7 +125,7 @@ impl OutputRendering {
             egl_display,
             egl_surface,
             gl_context: context,
-            resolution: (buf_x,buf_y),
+            resolution: (buf_x, buf_y),
         })
     }
 

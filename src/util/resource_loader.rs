@@ -41,10 +41,7 @@ impl ResourceLoader {
                 "Fetching scaled image from cache {{ path: {:?}, mode: {:?} }}",
                 path, mode
             );
-            return Ok(self
-                .scaled
-                .cache_get(&scale_key)
-                .expect("Cannot fail"));
+            return Ok(self.scaled.cache_get(&scale_key).expect("Cannot fail"));
         }
 
         if self.last_loaded.cache_get(path).is_none() {
@@ -56,9 +53,6 @@ impl ResourceLoader {
         let surface = self.last_loaded.cache_get(path).expect("Cannot fail");
         let surface_scaled = surface.process(mode)?;
         self.scaled.cache_set(scale_key.clone(), surface_scaled);
-        return Ok(self
-            .scaled
-            .cache_get(&scale_key)
-            .expect("Cannot fail"));
+        return Ok(self.scaled.cache_get(&scale_key).expect("Cannot fail"));
     }
 }
