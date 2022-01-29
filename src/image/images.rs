@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use super::{error::ImageError, scaling::Filter, scaling::Scaling};
+use super::{error::ImageError, scaling::Filter, scaling::Scaling, webp};
 use crate::outputs::Mode;
 use cairo::ImageSurface;
-use image::GenericImageView;
+use image::{GenericImageView, ImageFormat};
 use log::debug;
 
 pub struct Image {
@@ -14,7 +14,17 @@ pub struct Image {
 
 impl Image {
     pub fn new(path: PathBuf, scaling: Scaling, filter: Filter) -> Result<Self, ImageError> {
-        let image = image::open(path)?;
+        let image = {
+            let image = image::open(&path);
+            if let Err(image::ImageError::Unsupported(e)) = &image {
+                match e.format_hint() {
+                    image::error::ImageFormatHint::Exact(ImageFormat::WebP) => webp::open(&path)?,
+                    _ => image?,
+                }
+            } else {
+                image?
+            }
+        };
         let width = image.width();
         let height = image.height();
         let image_data: Vec<u8> = image

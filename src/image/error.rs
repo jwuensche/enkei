@@ -44,3 +44,9 @@ impl From<image::error::ImageError> for ImageError {
         }
     }
 }
+
+impl From<std::io::Error> for ImageError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
