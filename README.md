@@ -106,6 +106,11 @@ $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
 ```
 
 
+### Using as a systemd-service
+
+Under `config/enkei.service` an example service can be found to run sway as a systemd service.
+How to run wayland specific daemons in systemd is well described in the [ArchWiki](https://wiki.archlinux.org/title/Sway#Manage_Sway-specific_daemons_with_systemd) though the article is sway specific this approach can be used in plenitude of scenarios.
+
 ## Related Projects
 
 - [heic-to-dynamic-gnome-wallpaper](https://github.com/jwuensche/heic-to-dynamic-gnome-wallpaper)
