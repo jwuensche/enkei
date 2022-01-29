@@ -1,0 +1,12 @@
+[Unit]
+Description=Dynamic Wallpaper Tool for Wayland
+Documentation=https://github.com/jwuensche/enkei
+BindsTo=sway-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/enkei #PATH#
+Restart=on-failure
+
+[Install]
+WantedBy=sway-session.target
