@@ -2,7 +2,13 @@
 name = "enkei"
 version = "0.1.0"
 edition = "2021"
-description = "An OpenGL accelerated wallpaper tool with support for the Gnome Dyanmic Wallpaper definitions."
+description = "An OpenGL accelerated wallpaper tool with support for the Gnome Dynamic Wallpaper definitions."
+keywords = ["sway", "wlroots", "wallpaper", "background", "gnome"]
+categories = ["multimedia:images", "multimedia"]
+homepage = "https://git.spacesnek.rocks/johannes/enkei"
+repository = "https://git.spacesnek.rocks/johannes/enkei"
+authors = ["Johannes Wünsche <johannes@spacesnek.rocks>"]
+license = "GPL-3.0-only"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -28,5 +34,3 @@ wayland-client = "0.29.0"
 wayland-egl = "0.29.1"
 wayland-protocols = { version = "0.29.0", features = ["client", "unstable_protocols", "wayland-client"] }
 webp = "0.2.0"
-
-[features]
