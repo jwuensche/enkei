@@ -50,6 +50,8 @@ and many more; check an incomplete list here: https://github.com/solarkraft/awes
 
 ### Available Packages
 
+#### Fedora, OpenSuse and CentOS
+
 Prebuilt images are currently only available for Fedora 34/35/rawhide, OpenSuse Tumbleweed and Centos-stream 9 via [copr](https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/).
 
 Add the copr to your system and install `enkei` with:
@@ -58,6 +60,16 @@ Add the copr to your system and install `enkei` with:
 # dnf copr enable jwuensche/wayland-tools 
 # dnf install enkei
 ```
+
+#### ArchLinux
+
+Self-build packages are available for archlinux
+```shell
+$ cd pkgs/archlinux
+$ makepkg -i
+```
+
+#### Others
 
 Patches for packaging of any other distribution are welcome, and will be merged gladly. 
 
