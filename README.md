@@ -50,7 +50,7 @@ and many more; check an incomplete list here: https://github.com/solarkraft/awes
 
 ### Available Packages
 
-Prebuilt images are currently only available for Fedora 34/35/rawhide via [copr](https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/).
+Prebuilt images are currently only available for Fedora 34/35/rawhide, OpenSuse Tumbleweed and Centos-stream 9 via [copr](https://copr.fedorainfracloud.org/coprs/jwuensche/wayland-tools/).
 
 Add the copr to your system and install `enkei` with:
 
