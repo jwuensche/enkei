@@ -132,6 +132,6 @@ pub fn handle_output_events(
                 id,
             ))
             .expect("Handler failed and had to be aborted."),
-        _ => unreachable!(),
+        _ => {},
     }
 }

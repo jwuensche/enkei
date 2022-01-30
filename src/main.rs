@@ -239,7 +239,7 @@ fn main() -> Result<(), ErrorReport> {
     );
 
     event_queue
-        .sync_roundtrip(&mut (), |_, _, _| unreachable!())
+        .sync_roundtrip(&mut (), |_, _, _| {})
         .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
     // Preliminary check for file existence for better errors
