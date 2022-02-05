@@ -16,7 +16,7 @@
 
 use std::path::PathBuf;
 
-use crate::outputs::Mode;
+use crate::outputs::ScaledMode;
 
 use log::debug;
 
@@ -31,7 +31,7 @@ use cached::Cached;
 
 pub struct ResourceLoader {
     last_loaded: SizedCache<PathBuf, Image>,
-    scaled: SizedCache<(PathBuf, Mode), Vec<u8>>,
+    scaled: SizedCache<(PathBuf, ScaledMode), Vec<u8>>,
 }
 
 impl ResourceLoader {
@@ -45,11 +45,11 @@ impl ResourceLoader {
     pub fn load(
         &mut self,
         path: &PathBuf,
-        mode: &Mode,
+        mode: &ScaledMode,
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Vec<u8>, ImageError> {
-        let scale_key = (path.clone(), *mode);
+        let scale_key = (path.clone(), mode.clone());
         // workaround as this introduces nastier non-lexical lifetimes
         if self.scaled.cache_get(&scale_key).is_some() {
             // The scaling and filter cannot differ

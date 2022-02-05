@@ -26,6 +26,12 @@ use wayland_client::Main;
 use crate::messages::WorkerMessage;
 use send_wrapper::SendWrapper;
 
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct ScaledMode {
+    pub width: i32,
+    pub height: i32,
+}
+
 #[derive(Debug)]
 pub struct Output {
     geometry: Option<Geometry>,
@@ -75,8 +81,12 @@ impl Output {
         self.geometry.as_ref()
     }
 
-    pub fn mode(&self) -> Option<&Mode> {
-        self.mode.as_ref()
+    pub fn scale(&self) -> i32 {
+        self.scale
+    }
+
+    pub fn refresh_rate(&self) -> Option<f64> {
+        self.mode.map(|mode| mode.refresh as f64 / 1000f64)
     }
 
     pub fn inner(&self) -> &WlOutput {

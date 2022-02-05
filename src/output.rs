@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::ApplicationError;
+use crate::{ApplicationError, outputs::ScaledMode};
 
 use super::outputs::Output;
+use crossbeam_channel::unbounded;
 use khronos_egl::{Context as eglContext, Display as eglDisplay, Surface as eglSurface};
+use log::debug;
 use wayland_egl::WlEglSurface;
 
 use super::opengl::context::Context as glContext;
@@ -48,7 +50,8 @@ pub struct OutputRendering {
     _wl_egl_surface: WlEglSurface,
     egl_surface: eglSurface,
     gl_context: glContext,
-    pub resolution: (u32, u32),
+    pub resolution: ScaledMode,
+    pub scale: i32,
 }
 
 impl OutputRendering {
@@ -58,10 +61,16 @@ impl OutputRendering {
         event_queue: &mut EventQueue,
         output: Rc<RwLock<Output>>,
         egl_display: eglDisplay,
-        buf_x: u32,
-        buf_y: u32,
     ) -> Result<Self, ApplicationError> {
+        let lock = output
+            .read()
+            .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
+        let scale = lock.scale();
+        drop(lock);
+
         let surface = compositor.create_surface();
+        surface.commit();
+        surface.set_buffer_scale(scale);
         surface.commit();
         let lock = output
             .read()
@@ -75,15 +84,25 @@ impl OutputRendering {
         );
         background.set_layer(Layer::Background);
         background.set_anchor(Anchor::all());
+        background.set_exclusive_zone(-1);
+        background.set_size(0, 0);
         surface.commit();
-        background.quick_assign(|layer, event, _| {
+        let (tx, rx) = unbounded();
+        background.quick_assign(move |layer, event, _| {
             if let LayerEvent::Configure {
                 serial,
-                width: _,
-                height: _,
+                width,
+                height,
             } = event
             {
-                // Ignore the resolution received while registering, we know on which output we are.
+                debug!("Surface registered {{ {width}x{height} }}");
+                // On uneven widths we may encounter problems. This happens mostly in situations where we use scaling for Hidpi.
+                // But may happen to for virtual displays etc not bound to conventional display limits.
+                // Widening the width by one in these cases avoids this issue.
+                //
+                // If this sending fails, we have to refresh our output, though this is already accomplished via the WlOutput
+                // interface so we can drop this error here for good.
+                let _ = tx.send((width + (width % 2), height));
                 layer.ack_configure(serial);
             }
         });
@@ -92,7 +111,14 @@ impl OutputRendering {
             .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
             .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
-        let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, buf_x as i32, buf_y as i32);
+        let (width, height) = rx.recv().map_err(|_| ApplicationError::OutputDataNotReady)?;
+        debug!("Scaling output by factor: {scale}");
+        let scaled_mode = ScaledMode {
+            width: width as i32 * scale,
+            height: height as i32 * scale,
+        };
+        debug!("Create EGL surface {{ {}x{} }}", scaled_mode.width, scaled_mode.height);
+        let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, scaled_mode.width, scaled_mode.height);
         let (egl_context, egl_config) = create_context(egl_display)?;
         let egl_surface = unsafe {
             egl.create_window_surface(
@@ -141,15 +167,15 @@ impl OutputRendering {
             egl_display,
             egl_surface,
             gl_context: context,
-            resolution: (buf_x, buf_y),
+            resolution: scaled_mode,
+            scale,
         })
     }
 
-    pub fn set_to<I: Into<i32>>(
+    pub fn set_to(
         &mut self,
         image: &[u8],
-        width: I,
-        height: I,
+        mode: &ScaledMode
     ) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
@@ -158,15 +184,14 @@ impl OutputRendering {
             Some(self.egl_context),
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
-        self.gl_context.set_to(image, width.into(), height.into());
+        self.gl_context.set_to(image, mode.width.into(), mode.height.into());
         Ok(())
     }
 
-    pub fn set_from<I: Into<i32>>(
+    pub fn set_from(
         &mut self,
         image: &[u8],
-        width: I,
-        height: I,
+        mode: &ScaledMode,
     ) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
@@ -175,7 +200,7 @@ impl OutputRendering {
             Some(self.egl_context),
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
-        self.gl_context.set_from(image, width.into(), height.into());
+        self.gl_context.set_from(image, mode.width.into(), mode.height.into());
         Ok(())
     }
 
@@ -194,6 +219,7 @@ impl OutputRendering {
         self.gl_context.draw(process);
         egl.swap_buffers(self.egl_display, self.egl_surface)
             .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
+        self.surface.damage(0, 0, i32::max_value(), i32::max_value());
         self.surface.commit();
         Ok(())
     }

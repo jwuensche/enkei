@@ -101,43 +101,24 @@ pub fn work(
 
                     if state.renders.contains_key(&id) {
                         debug!("Output {{ id: {id} }} updated and not new. Refreshing.");
-
-                        if let Some(o) = state.renders.get(&id) {
-                            let lock = output
-                                .read()
-                                .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
-                            let c = lock.mode().cloned();
-                            drop(lock);
-                            if let Some(mode) = c {
-                                if o.resolution != (*mode.width() as u32, *mode.height() as u32) {
-                                    debug!("Resolution for Output {{ id: {id} }}, has changed");
-                                    // On Change we have to reinitialize the output, though this needs
-                                    // to be a complete reinit with all surfaces so for simplicity we
-                                    // "destroy" the output here and add it anew.
-                                    senders
-                                        .send(WorkerMessage::RemoveOutput(id))
-                                        .expect("Cannot fail");
-                                    senders
-                                        .send(WorkerMessage::AddOutput(output, id))
-                                        .expect("Cannot fail");
-                                }
-                            }
-                        }
+                        // On Change we have to reinitialize the output, though this needs
+                        // to be a complete reinit with all surfaces so for simplicity we
+                        // "destroy" the output here and add it anew.
+                        senders
+                            .send(WorkerMessage::RemoveOutput(id))
+                            .expect("Cannot fail");
+                        senders
+                            .send(WorkerMessage::AddOutput(output, id))
+                            .expect("Cannot fail");
                     } else {
                         let lock = output
                             .read()
                             .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
-                        if let (Some(geo), Some(mode)) = (lock.geometry(), lock.mode()) {
-                            debug!("Rendering on output {{ make: {}, model: {}, resolution: {}x{}, position: {}x{} }}", geo.make(), geo.model(), mode.width(), mode.height(), geo.x(), geo.y());
+                        if let Some(geo) = lock.geometry() {
+                            debug!("Rendering on output {{ make: {}, model: {}, position: {}x{} }}", geo.make(), geo.model(), geo.x(), geo.y());
                         }
-                        let width;
-                        let height;
-                        if let Some(mode) = lock.mode() {
-                            width = *mode.width();
-                            height = *mode.height();
-                            state.set_fps(*mode.refresh() as f64 / 1000f64);
-                        } else {
-                            return Err(ApplicationError::OutputDataNotReady);
+                        if let Some(fps) = lock.refresh_rate() {
+                            state.set_fps(fps);
                         }
                         drop(lock);
                         state.renders.insert(
@@ -148,8 +129,6 @@ pub fn work(
                                 &mut event_queue,
                                 Rc::clone(&output),
                                 egl_display,
-                                width as u32,
-                                height as u32,
                             )?,
                         );
                         let output = state.renders.get_mut(&id).expect("Cannot fail");
@@ -307,32 +286,17 @@ fn refresh_output(
     scaling: Scaling,
     filter: Filter,
 ) -> Result<(), ApplicationError> {
-    let lock = output
-        .output
-        .read()
-        .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
-    let width;
-    let height;
-    let mode;
-    if let Some(output_mode) = lock.mode() {
-        width = *output_mode.width();
-        height = *output_mode.height();
-        mode = *output_mode;
-    } else {
-        return Err(ApplicationError::OutputDataNotReady);
-    }
-    drop(lock);
-
     let transition = {
         match metadata {
             AnimationState::Static(_, t) => t,
             AnimationState::Transition(_, t) => t,
         }
     };
+    let scaled_mode = output.resolution.clone();
 
-    let from = resources.load(transition.from(), &mode, scaling, filter)?;
+    let from = resources.load(transition.from(), &scaled_mode, scaling, filter)?;
     let start = std::time::Instant::now();
-    output.set_from(from, width, height)?;
+    output.set_from(from, &scaled_mode)?;
     debug!(
         "Sending of image texture to shader took {}ms",
         start.elapsed().as_millis()
@@ -340,13 +304,13 @@ fn refresh_output(
     if transition.is_animated() {
         let to = resources.load(
             transition.to().expect("Cannot fail."),
-            &mode,
+            &scaled_mode,
             scaling,
             filter,
         )?;
-        output.set_to(to, width, height)?;
+        output.set_to(to, &scaled_mode)?;
     } else {
-        output.set_to(from, width, height)?;
+        output.set_to(from, &scaled_mode)?;
     }
     Ok(())
 }
