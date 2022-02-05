@@ -9,10 +9,11 @@ Source0:        https://codeload.github.com/jwuensche/%{name}/tar.gz/refs/tags/v
 
 %if 0%{?suse_version}
 BuildRequires:  cargo wayland-devel Mesa-libEGL-devel glib2-devel cairo-devel libwebp-devel gcc
+Requires:       Mesa-libEGL libglib-2_0-0 libcairo2 libcairo-gobject2 libwebp7
 %else
 BuildRequires:  cargo wayland-devel mesa-libEGL-devel glib2-devel cairo-devel cairo-gobject-devel libwebp-devel
-%endif
 Requires:       mesa-libEGL glib2 cairo cairo-gobject libwebp
+%endif
 
 # I will not be bothered with this for now...
 %global debug_package %{nil}
