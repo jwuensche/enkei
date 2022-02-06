@@ -439,6 +439,7 @@ dependencies = [
  "crossbeam-channel",
  "env_logger",
  "ezing",
+ "fast_image_resize",
  "getset",
  "gl",
  "image",
@@ -497,6 +498,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "566e88319a9d235613fa84128a4b24450923bf0380d472f161b324936b18a7d1"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "fast_image_resize"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5237d5b62edc1b658259673747ca15f317d6a51b4015b20159fc64e084281b6e"
+dependencies = [
+ "num-traits",
+ "thiserror",
 ]
 
 [[package]]

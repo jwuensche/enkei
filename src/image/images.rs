@@ -18,12 +18,11 @@ use std::path::PathBuf;
 
 use super::{error::ImageError, scaling::Filter, scaling::Scaling, webp};
 use crate::outputs::ScaledMode;
-use cairo::ImageSurface;
-use image::ImageFormat;
+use image::{ImageFormat, DynamicImage};
 use log::debug;
 
 pub struct Image {
-    inner: ImageSurface,
+    inner: DynamicImage,
     scaling: Scaling,
     filter: Filter,
 }
@@ -41,31 +40,8 @@ impl Image {
                 image?
             }
         };
-        let width = image.width();
-        let height = image.height();
-        let image_data: Vec<u8> = image
-            .to_rgb8()
-            .as_raw()
-            .clone()
-            .chunks_exact(3)
-            .flat_map(|arr| [arr[2], arr[1], arr[0], 0])
-            .collect();
-        let stride = cairo::Format::Rgb24.stride_for_width(width).map_err(|_| {
-            ImageError::Generic(format!(
-                "The stride could not be determined for width {}",
-                width
-            ))
-        })?;
-        let surface = ImageSurface::create_for_data(
-            image_data,
-            cairo::Format::Rgb24,
-            width as i32,
-            height as i32,
-            stride,
-        )
-        .map_err(ImageError::CouldNotCreateSurface)?;
         Ok(Self {
-            inner: surface,
+            inner: image,
             scaling,
             filter,
         })

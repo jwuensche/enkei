@@ -14,7 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use std::num::NonZeroU32;
+
 use cairo::ImageSurface;
+use image::DynamicImage;
+use log::debug;
 
 use super::error::ImageError;
 
@@ -41,7 +45,7 @@ pub enum Scaling {
 impl Scaling {
     pub fn scale(
         &self,
-        sur: &ImageSurface,
+        sur: &DynamicImage,
         geometry: &ScaledMode,
         filter: Filter,
     ) -> Result<Vec<u8>, ImageError> {
@@ -52,11 +56,34 @@ impl Scaling {
         }
     }
 
-    fn none(buf: &ImageSurface, geometry: &ScaledMode) -> Result<Vec<u8>, ImageError> {
+    fn none(buf: &DynamicImage, geometry: &ScaledMode) -> Result<Vec<u8>, ImageError> {
         let pad_width = (geometry.width as f64 - buf.width() as f64) / 2.0;
         let pad_height = (geometry.height as f64 - buf.height() as f64) / 2.0;
 
         {
+            let image_data: Vec<u8> = buf
+                .to_rgba8()
+                .clone()
+                .chunks_exact(3)
+                .flat_map(|arr| [arr[2], arr[1], arr[0], 0])
+                .collect();
+            let width = buf.width();
+            let height = buf.height();
+            let stride = cairo::Format::Rgb24.stride_for_width(width).map_err(|_| {
+                ImageError::Generic(format!(
+                    "The stride could not be determined for width {}",
+                    width
+                ))
+            })?;
+            let surface = ImageSurface::create_for_data(
+                image_data,
+                cairo::Format::Rgb24,
+                width as i32,
+                height as i32,
+                stride,
+            )
+            .map_err(ImageError::CouldNotCreateSurface)?;
+
             let target = cairo::ImageSurface::create(
                 cairo::Format::Rgb24,
                 geometry.width,
@@ -64,7 +91,7 @@ impl Scaling {
             )
             .map_err(ImageError::CouldNotCreateSurface)?;
             let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
-            ctx.set_source_surface(buf, pad_width, pad_height)
+            ctx.set_source_surface(&surface, pad_width, pad_height)
                 .map_err(ImageError::CouldNotSetSource)?;
             ctx.paint().map_err(ImageError::CouldNotWriteResult)?;
             drop(ctx);
@@ -76,16 +103,16 @@ impl Scaling {
         }
     }
 
-    fn fit(buf: &ImageSurface, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
+    fn fit(buf: &DynamicImage, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::min)
     }
 
-    fn fill(buf: &ImageSurface, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
+    fn fill(buf: &DynamicImage, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 
     fn fill_or_fit<F: Fn(f64, f64) -> f64>(
-        buf: &ImageSurface,
+        buf: &DynamicImage,
         geometry: &ScaledMode,
         filter: Filter,
         comp: F,
@@ -108,6 +135,62 @@ impl Scaling {
             .map(|elem| (elem / 2) as f64 / max_ratio)
             .unwrap_or(0.0)
             .clamp(-(geometry.width as f64), geometry.width as f64);
+
+
+        /*
+         * SIMD Resize experiment
+        */
+        let width = (buf.width() as f64 * max_ratio) as u32;
+        let height = (buf.height() as f64 * max_ratio) as u32;
+
+        let image_data: Vec<u8>;
+        if width != buf.width() && buf.height() != height {
+            debug!("Using SIMD image resizing");
+            let fallback = NonZeroU32::new(1).expect("Cannot fail");
+            let orig_image= fast_image_resize::Image::from_vec_u8(
+                NonZeroU32::new(buf.width() as u32).unwrap_or(fallback),
+                NonZeroU32::new(buf.height() as u32).unwrap_or(fallback),
+                buf.to_rgba8().into_raw(),
+                fast_image_resize::PixelType::U8x4,
+            )?;
+
+            let mut scaled_image = fast_image_resize::Image::new(
+                NonZeroU32::new(width).unwrap_or(fallback),
+                NonZeroU32::new(height).unwrap_or(fallback),
+                fast_image_resize::PixelType::U8x4,
+            );
+            let mut scaled_view = scaled_image.view_mut();
+            let mut resizer = fast_image_resize::Resizer::new(
+                fast_image_resize::ResizeAlg::Convolution(fast_image_resize::FilterType::Lanczos3)
+            );
+            // This function only fails if we use different kinds of PixelTypes
+            resizer.resize(&orig_image.view(), &mut scaled_view).expect("Cannot fail");
+
+            image_data = scaled_image
+                // Turn around because of endianness of cairo...
+                .buffer().chunks_exact(4).flat_map(|arr| [arr[2],arr[1], arr[0], arr[3]]).collect();
+        } else {
+            debug!("No scaling required for image");
+            // Flippity Flop, it's time to stop
+            image_data = buf.to_rgba8().into_raw().chunks_exact(4).flat_map(|arr| [arr[2],arr[1], arr[0], arr[3]]).collect();
+        }
+
+        let stride = cairo::Format::ARgb32.stride_for_width(width).map_err(|_| {
+            ImageError::Generic(format!(
+                "The stride could not be determined for width {}",
+                width
+            ))
+        })?;
+        let surface = ImageSurface::create_for_data(
+            image_data,
+            cairo::Format::ARgb32,
+            width as i32,
+            height as i32,
+            stride,
+        )
+        .map_err(ImageError::CouldNotCreateSurface)?;
+
+
         // Create context and scale and crop to fit
         {
             let target: ImageSurface = cairo::ImageSurface::create(
@@ -117,8 +200,7 @@ impl Scaling {
             )
             .map_err(ImageError::CouldNotCreateSurface)?;
             let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
-            ctx.scale(max_ratio, max_ratio);
-            ctx.set_source_surface(buf, -crop_width, -crop_height)
+            ctx.set_source_surface(&surface, -crop_width, -crop_height)
                 .map_err(ImageError::CouldNotSetSource)?;
             ctx.source().set_filter(filter.into());
             ctx.paint().map_err(ImageError::CouldNotWriteResult)?;

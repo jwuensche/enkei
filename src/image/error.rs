@@ -42,8 +42,16 @@ pub enum ImageError {
     Unsupported(UnsupportedError),
     #[error("Reading of file failed: `{0}`")]
     Io(std::io::Error),
+    #[error("Image Buffer could not be interpreted: `{0}`")]
+    BufferInvalid(fast_image_resize::ImageBufferError),
     #[error("Generic: `{0}`")]
     Generic(String),
+}
+
+impl From<fast_image_resize::ImageBufferError> for ImageError {
+    fn from(e: fast_image_resize::ImageBufferError) -> Self {
+        Self::BufferInvalid(e)
+    }
 }
 
 impl From<image::error::ImageError> for ImageError {
