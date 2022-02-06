@@ -11,7 +11,7 @@ makedepends=('cargo')
 depends=('mesa' 'glib2' 'cairo' 'libwebp' 'wayland')
 
 source=("$pkgname-$pkgver.tar.gz::https://git.spacesnek.rocks/johannes/$pkgname/archive/v$pkgver.tar.gz")
-sha256sums=('b63c3d697f3d0b0e00b7b77de22a55f99a73a22d8385578488b31e456fc90f6c')
+sha256sums=('8b86d8b465be8bc2da370dbdd484aa8c956f1921794c213f7ccbad5814196366')
 
 build() {
 	cd "$pkgname"
