@@ -187,7 +187,7 @@ impl OutputRendering {
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context
-            .set_to(image, mode.width.into(), mode.height.into());
+            .set_to(image, mode.width, mode.height);
         Ok(())
     }
 
@@ -200,7 +200,7 @@ impl OutputRendering {
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
         self.gl_context
-            .set_from(image, mode.width.into(), mode.height.into());
+            .set_from(image, mode.width, mode.height);
         Ok(())
     }
 

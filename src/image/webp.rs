@@ -26,6 +26,6 @@ pub fn open<P: AsRef<Path>>(path: P) -> Result<DynamicImage, ImageError> {
     let mut file = std::fs::OpenOptions::new().read(true).open(path)?;
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
-    let decoder = webp::Decoder::new(&mut data);
+    let decoder = webp::Decoder::new(&data);
     Ok(decoder.decode().unwrap().to_image())
 }

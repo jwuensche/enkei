@@ -63,7 +63,6 @@ impl Scaling {
         {
             let image_data: Vec<u8> = buf
                 .to_rgba8()
-                .clone()
                 .chunks_exact(3)
                 .flat_map(|arr| [arr[2], arr[1], arr[0], 0])
                 .collect();

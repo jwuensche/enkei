@@ -193,7 +193,7 @@ pub fn work(
                     state.ticker_active = false;
                     state.stop_all_timers.send(()).expect("Cannot fail");
                     // drain the current channel
-                    while let Ok(_) = state.timer_receiver.try_recv() {}
+                    while state.timer_receiver.try_recv().is_ok() {}
                     let animation_state = metadata.current()?;
                     for (_, output) in state.renders.iter_mut() {
                         refresh_output(
