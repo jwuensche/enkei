@@ -115,7 +115,13 @@ pub fn work(
                             .read()
                             .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
                         if let Some(geo) = lock.geometry() {
-                            debug!("Rendering on output {{ make: {}, model: {}, position: {}x{} }}", geo.make(), geo.model(), geo.x(), geo.y());
+                            debug!(
+                                "Rendering on output {{ make: {}, model: {}, position: {}x{} }}",
+                                geo.make(),
+                                geo.model(),
+                                geo.x(),
+                                geo.y()
+                            );
                         }
                         if let Some(fps) = lock.refresh_rate() {
                             state.set_fps(fps);

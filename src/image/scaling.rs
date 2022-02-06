@@ -84,12 +84,9 @@ impl Scaling {
             )
             .map_err(ImageError::CouldNotCreateSurface)?;
 
-            let target = cairo::ImageSurface::create(
-                cairo::Format::Rgb24,
-                geometry.width,
-                geometry.height,
-            )
-            .map_err(ImageError::CouldNotCreateSurface)?;
+            let target =
+                cairo::ImageSurface::create(cairo::Format::Rgb24, geometry.width, geometry.height)
+                    .map_err(ImageError::CouldNotCreateSurface)?;
             let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
             ctx.set_source_surface(&surface, pad_width, pad_height)
                 .map_err(ImageError::CouldNotSetSource)?;
@@ -103,11 +100,19 @@ impl Scaling {
         }
     }
 
-    fn fit(buf: &DynamicImage, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
+    fn fit(
+        buf: &DynamicImage,
+        geometry: &ScaledMode,
+        filter: Filter,
+    ) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::min)
     }
 
-    fn fill(buf: &DynamicImage, geometry: &ScaledMode, filter: Filter) -> Result<Vec<u8>, ImageError> {
+    fn fill(
+        buf: &DynamicImage,
+        geometry: &ScaledMode,
+        filter: Filter,
+    ) -> Result<Vec<u8>, ImageError> {
         Scaling::fill_or_fit(buf, geometry, filter, f64::max)
     }
 
@@ -136,10 +141,9 @@ impl Scaling {
             .unwrap_or(0.0)
             .clamp(-(geometry.width as f64), geometry.width as f64);
 
-
         /*
          * SIMD Resize experiment
-        */
+         */
         let width = (buf.width() as f64 * max_ratio) as u32;
         let height = (buf.height() as f64 * max_ratio) as u32;
 
@@ -147,7 +151,7 @@ impl Scaling {
         if width != buf.width() && buf.height() != height {
             debug!("Using SIMD image resizing");
             let fallback = NonZeroU32::new(1).expect("Cannot fail");
-            let orig_image= fast_image_resize::Image::from_vec_u8(
+            let orig_image = fast_image_resize::Image::from_vec_u8(
                 NonZeroU32::new(buf.width() as u32).unwrap_or(fallback),
                 NonZeroU32::new(buf.height() as u32).unwrap_or(fallback),
                 buf.to_rgba8().into_raw(),
@@ -161,18 +165,28 @@ impl Scaling {
             );
             let mut scaled_view = scaled_image.view_mut();
             let mut resizer = fast_image_resize::Resizer::new(
-                fast_image_resize::ResizeAlg::Convolution(fast_image_resize::FilterType::Lanczos3)
+                fast_image_resize::ResizeAlg::Convolution(fast_image_resize::FilterType::Lanczos3),
             );
             // This function only fails if we use different kinds of PixelTypes
-            resizer.resize(&orig_image.view(), &mut scaled_view).expect("Cannot fail");
+            resizer
+                .resize(&orig_image.view(), &mut scaled_view)
+                .expect("Cannot fail");
 
             image_data = scaled_image
                 // Turn around because of endianness of cairo...
-                .buffer().chunks_exact(4).flat_map(|arr| [arr[2],arr[1], arr[0], arr[3]]).collect();
+                .buffer()
+                .chunks_exact(4)
+                .flat_map(|arr| [arr[2], arr[1], arr[0], arr[3]])
+                .collect();
         } else {
             debug!("No scaling required for image");
             // Flippity Flop, it's time to stop
-            image_data = buf.to_rgba8().into_raw().chunks_exact(4).flat_map(|arr| [arr[2],arr[1], arr[0], arr[3]]).collect();
+            image_data = buf
+                .to_rgba8()
+                .into_raw()
+                .chunks_exact(4)
+                .flat_map(|arr| [arr[2], arr[1], arr[0], arr[3]])
+                .collect();
         }
 
         let stride = cairo::Format::ARgb32.stride_for_width(width).map_err(|_| {
@@ -190,15 +204,11 @@ impl Scaling {
         )
         .map_err(ImageError::CouldNotCreateSurface)?;
 
-
         // Create context and scale and crop to fit
         {
-            let target: ImageSurface = cairo::ImageSurface::create(
-                cairo::Format::Rgb24,
-                geometry.width,
-                geometry.height,
-            )
-            .map_err(ImageError::CouldNotCreateSurface)?;
+            let target: ImageSurface =
+                cairo::ImageSurface::create(cairo::Format::Rgb24, geometry.width, geometry.height)
+                    .map_err(ImageError::CouldNotCreateSurface)?;
             let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
             ctx.set_source_surface(&surface, -crop_width, -crop_height)
                 .map_err(ImageError::CouldNotSetSource)?;

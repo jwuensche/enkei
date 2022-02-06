@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 use super::{error::ImageError, scaling::Filter, scaling::Scaling, webp};
 use crate::outputs::ScaledMode;
-use image::{ImageFormat, DynamicImage};
+use image::{DynamicImage, ImageFormat};
 use log::debug;
 
 pub struct Image {
@@ -50,7 +50,12 @@ impl Image {
     pub fn process(&self, mode: &ScaledMode) -> Result<Vec<u8>, ImageError> {
         let start = std::time::Instant::now();
         let res = self.scaling.scale(&self.inner, mode, self.filter);
-        debug!("Scaling of image to size {{ x: {}, y: {} }} took {}ms", mode.width, mode.height, start.elapsed().as_millis());
+        debug!(
+            "Scaling of image to size {{ x: {}, y: {} }} took {}ms",
+            mode.width,
+            mode.height,
+            start.elapsed().as_millis()
+        );
         res
     }
 }

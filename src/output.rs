@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{ApplicationError, outputs::ScaledMode};
+use crate::{outputs::ScaledMode, ApplicationError};
 
 use super::outputs::Output;
 use crossbeam_channel::unbounded;
@@ -111,14 +111,20 @@ impl OutputRendering {
             .sync_roundtrip(&mut (), |_, _, _| { /* we ignore unfiltered messages */ })
             .map_err(|e| ApplicationError::io_error(e, line!(), file!()))?;
 
-        let (width, height) = rx.recv().map_err(|_| ApplicationError::OutputDataNotReady)?;
+        let (width, height) = rx
+            .recv()
+            .map_err(|_| ApplicationError::OutputDataNotReady)?;
         debug!("Scaling output by factor: {scale}");
         let scaled_mode = ScaledMode {
             width: width as i32 * scale,
             height: height as i32 * scale,
         };
-        debug!("Create EGL surface {{ {}x{} }}", scaled_mode.width, scaled_mode.height);
-        let wl_egl_surface = wayland_egl::WlEglSurface::new(&surface, scaled_mode.width, scaled_mode.height);
+        debug!(
+            "Create EGL surface {{ {}x{} }}",
+            scaled_mode.width, scaled_mode.height
+        );
+        let wl_egl_surface =
+            wayland_egl::WlEglSurface::new(&surface, scaled_mode.width, scaled_mode.height);
         let (egl_context, egl_config) = create_context(egl_display)?;
         let egl_surface = unsafe {
             egl.create_window_surface(
@@ -172,11 +178,7 @@ impl OutputRendering {
         })
     }
 
-    pub fn set_to(
-        &mut self,
-        image: &[u8],
-        mode: &ScaledMode
-    ) -> Result<(), ApplicationError> {
+    pub fn set_to(&mut self, image: &[u8], mode: &ScaledMode) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
@@ -184,15 +186,12 @@ impl OutputRendering {
             Some(self.egl_context),
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
-        self.gl_context.set_to(image, mode.width.into(), mode.height.into());
+        self.gl_context
+            .set_to(image, mode.width.into(), mode.height.into());
         Ok(())
     }
 
-    pub fn set_from(
-        &mut self,
-        image: &[u8],
-        mode: &ScaledMode,
-    ) -> Result<(), ApplicationError> {
+    pub fn set_from(&mut self, image: &[u8], mode: &ScaledMode) -> Result<(), ApplicationError> {
         egl.make_current(
             self.egl_display,
             Some(self.egl_surface),
@@ -200,7 +199,8 @@ impl OutputRendering {
             Some(self.egl_context),
         )
         .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
-        self.gl_context.set_from(image, mode.width.into(), mode.height.into());
+        self.gl_context
+            .set_from(image, mode.width.into(), mode.height.into());
         Ok(())
     }
 
@@ -219,7 +219,8 @@ impl OutputRendering {
         self.gl_context.draw(process);
         egl.swap_buffers(self.egl_display, self.egl_surface)
             .map_err(|e| ApplicationError::egl_error(e, line!(), file!()))?;
-        self.surface.damage(0, 0, i32::max_value(), i32::max_value());
+        self.surface
+            .damage(0, 0, i32::max_value(), i32::max_value());
         self.surface.commit();
         Ok(())
     }
