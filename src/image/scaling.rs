@@ -30,9 +30,6 @@ pub enum Filter {
     Fast,
     Good,
     Best,
-    Nearest,
-    Bilinear,
-    Gaussian,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, ArgEnum)]
@@ -164,7 +161,7 @@ impl Scaling {
             );
             let mut scaled_view = scaled_image.view_mut();
             let mut resizer = fast_image_resize::Resizer::new(
-                fast_image_resize::ResizeAlg::Convolution(fast_image_resize::FilterType::Lanczos3),
+                fast_image_resize::ResizeAlg::Convolution(filter.into()),
             );
             // This function only fails if we use different kinds of PixelTypes
             resizer
@@ -211,7 +208,6 @@ impl Scaling {
             let ctx = cairo::Context::new(&target).map_err(ImageError::CouldNotCreateContext)?;
             ctx.set_source_surface(&surface, -crop_width, -crop_height)
                 .map_err(ImageError::CouldNotSetSource)?;
-            ctx.source().set_filter(filter.into());
             ctx.paint().map_err(ImageError::CouldNotWriteResult)?;
             drop(ctx);
 
@@ -227,15 +223,12 @@ impl Scaling {
     }
 }
 
-impl From<Filter> for cairo::Filter {
+impl From<Filter> for fast_image_resize::FilterType {
     fn from(filter: Filter) -> Self {
         match filter {
-            Filter::Fast => cairo::Filter::Fast,
-            Filter::Good => cairo::Filter::Good,
-            Filter::Best => cairo::Filter::Best,
-            Filter::Nearest => cairo::Filter::Nearest,
-            Filter::Bilinear => cairo::Filter::Bilinear,
-            Filter::Gaussian => cairo::Filter::Gaussian,
+            Filter::Fast => fast_image_resize::FilterType::Bilinear,
+            Filter::Good => fast_image_resize::FilterType::CatmullRom,
+            Filter::Best => fast_image_resize::FilterType::Lanczos3,
         }
     }
 }
