@@ -42,7 +42,7 @@ and many more; check an incomplete list here: https://github.com/solarkraft/awes
 
 | flag | purpose/variants                                                               |
 |:-----|:-------------------------------------------------------------------------------|
-| `-f` | Filter Methods (Fast, Good, Best, Nearest, Bilinear, Gaussian) [default: Good] |
+| `-f` | Filter Methods (Fast, Good, Best) [default: Good] |
 | `-m` | Display Mode (Dynamic, Static) [default: Autodetect]                           |
 | `-s` | Scale (Fill, Fit, None) [default: Fill]                                        |
 

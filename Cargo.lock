@@ -430,7 +430,7 @@ checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "enkei"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "cached",
  "cairo-rs",
