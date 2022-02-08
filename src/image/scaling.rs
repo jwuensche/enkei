@@ -60,8 +60,8 @@ impl Scaling {
         {
             let image_data: Vec<u8> = buf
                 .to_rgba8()
-                .chunks_exact(3)
-                .flat_map(|arr| [arr[2], arr[1], arr[0], 0])
+                .chunks_exact(4)
+                .flat_map(|arr| [arr[2], arr[1], arr[0], arr[3]])
                 .collect();
             let width = buf.width();
             let height = buf.height();
@@ -89,10 +89,14 @@ impl Scaling {
             ctx.paint().map_err(ImageError::CouldNotWriteResult)?;
             drop(ctx);
 
-            Ok(target
+            let data = target
                 .take_data()
                 .map_err(ImageError::CouldNotGetData)?
-                .to_vec())
+                .to_vec();
+            Ok(data
+                .chunks_exact(4)
+                .flat_map(|arr| [arr[2], arr[1], arr[0]])
+                .collect())
         }
     }
 
@@ -139,7 +143,7 @@ impl Scaling {
             .clamp(-(geometry.width as f64), geometry.width as f64);
 
         /*
-         * SIMD Resize experiment
+         * SIMD Resize
          */
         let width = (buf.width() as f64 * max_ratio) as u32;
         let height = (buf.height() as f64 * max_ratio) as u32;
