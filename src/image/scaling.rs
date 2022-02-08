@@ -126,14 +126,15 @@ impl Scaling {
         let max_ratio = comp(height_ratio, width_ratio);
 
         // Get cropping edges (aspect)
+        // This needs to take into accordance the now larger scaled
         let crop_height = ((buf.height() as f64 * max_ratio) as i32)
             .checked_sub(geometry.height)
-            .map(|elem| (elem / 2) as f64 / max_ratio)
+            .map(|elem| (elem / 2) as f64)
             .unwrap_or(0.0)
             .clamp(-(geometry.height as f64), geometry.height as f64);
         let crop_width = ((buf.width() as f64 * max_ratio) as i32)
             .checked_sub(geometry.width)
-            .map(|elem| (elem / 2) as f64 / max_ratio)
+            .map(|elem| (elem / 2) as f64)
             .unwrap_or(0.0)
             .clamp(-(geometry.width as f64), geometry.width as f64);
 
