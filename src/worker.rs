@@ -30,7 +30,7 @@ use crate::messages::WorkerMessage;
 use crate::metadata::{AnimationState, Metadata};
 use crate::util::ResourceLoader;
 use crate::watchdog::timer;
-use crate::ApplicationError;
+use crate::{ApplicationError, Args};
 use std::collections::HashMap;
 
 pub struct State {
@@ -65,6 +65,7 @@ pub fn work(
     senders: Sender<WorkerMessage>,
     mut event_queue: EventQueue,
     metadata: Metadata,
+    args: Args,
 ) -> Result<(), ApplicationError> {
     /*
      * Init wayland objects
@@ -143,8 +144,8 @@ pub fn work(
                             output,
                             &mut resource_loader,
                             &animation_state,
-                            Scaling::Fill,
-                            Filter::Best,
+                            args.scale,
+                            args.filter,
                         )?;
                         state.ticker_active = state_draw(
                             &animation_state,

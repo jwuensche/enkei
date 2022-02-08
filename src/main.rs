@@ -127,7 +127,7 @@ use clap::Parser;
     version = VERSION,
     about = DESC,
 )]
-struct Args {
+pub struct Args {
     #[clap(
         index = 1,
         help = "The file to display.",
@@ -251,12 +251,12 @@ fn main() -> Result<(), ErrorReport> {
     let metadata = {
         match args.mode {
             Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
-            Some(Mode::Dynamic) => MetadataReader::read(args.file)?,
+            Some(Mode::Dynamic) => MetadataReader::read(&args.file)?,
             None => {
                 debug!("Checking path {{ {:?} }}", &args.file);
                 let extension = args.file.extension();
                 if extension.is_some() && extension.unwrap() == "xml" {
-                    MetadataReader::read(args.file)?
+                    MetadataReader::read(&args.file)?
                 } else if regex_is_match!(
                     r"\.(?i)(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
                     args.file.to_str().expect("Could not deciper given path")
@@ -276,6 +276,7 @@ fn main() -> Result<(), ErrorReport> {
         message_tx,
         event_queue,
         metadata.clone(),
+        args,
     );
     if let Err(e) = result {
         let report: ErrorReport = ErrorReport::from(e)
