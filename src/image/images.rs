@@ -23,8 +23,8 @@ use log::debug;
 
 pub struct Image {
     inner: DynamicImage,
-    scaling: Scaling,
-    filter: Filter,
+    pub scaling: Scaling,
+    pub filter: Filter,
 }
 
 impl Image {

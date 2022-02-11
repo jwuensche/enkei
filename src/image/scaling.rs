@@ -19,20 +19,21 @@ use std::num::NonZeroU32;
 use cairo::ImageSurface;
 use image::DynamicImage;
 use log::debug;
+use serde::Deserialize;
 
 use super::error::ImageError;
 
 use crate::outputs::ScaledMode;
 use clap::ArgEnum;
 
-#[derive(PartialEq, Debug, Clone, Copy, ArgEnum)]
+#[derive(PartialEq, Debug, Clone, Copy, ArgEnum, Deserialize, Hash, Eq)]
 pub enum Filter {
     Fast,
     Good,
     Best,
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, ArgEnum)]
+#[derive(PartialEq, Debug, Clone, Copy, ArgEnum, Deserialize, Hash, Eq)]
 pub enum Scaling {
     Fill,
     Fit,

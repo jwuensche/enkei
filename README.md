@@ -133,7 +133,7 @@ How to run wayland specific daemons in systemd is well described in the [ArchWik
 
 ## Feature Ideas
   
-- [ ] Allow setting of wallpapers via IPC
+- [x] Allow setting of wallpapers via IPC (implemented on main branch)
 
     > A nice to have would be to send messages to the already running enkei
     > instance to change the wallpaper shown.

@@ -39,10 +39,13 @@ pub struct State {
     renders: HashMap<u32, OutputRendering>,
     stop_all_timers: Sender<()>,
     timer_receiver: Receiver<()>,
+    metadata: Metadata,
+    scale: Scaling,
+    filter: Filter,
 }
 
 impl State {
-    fn new() -> Self {
+    fn new(metadata: Metadata, scale: Scaling, filter: Filter) -> Self {
         let (tx, rx) = unbounded();
         Self {
             fps: 1f64,
@@ -50,6 +53,9 @@ impl State {
             renders: HashMap::new(),
             stop_all_timers: tx,
             timer_receiver: rx,
+            metadata,
+            scale,
+            filter,
         }
     }
 
@@ -84,8 +90,10 @@ pub fn work(
 
     // Use an output independent store for loaded images, allows for some reduction in IO time
     let mut resource_loader = ResourceLoader::new();
-    let mut state = State::new();
+    let mut state = State::new(metadata, args.scale, args.filter);
 
+    // Spawn IPC socket
+    crate::watchdog::ipc::spawn(senders.clone());
     // Process all pending requests
     loop {
         event_queue
@@ -139,13 +147,13 @@ pub fn work(
                             )?,
                         );
                         let output = state.renders.get_mut(&id).expect("Cannot fail");
-                        let animation_state = metadata.current()?;
+                        let animation_state = state.metadata.current()?;
                         refresh_output(
                             output,
                             &mut resource_loader,
                             &animation_state,
-                            args.scale,
-                            args.filter,
+                            state.scale,
+                            state.filter,
                         )?;
                         state.ticker_active = state_draw(
                             &animation_state,
@@ -195,14 +203,14 @@ pub fn work(
                     state.stop_all_timers.send(()).expect("Cannot fail");
                     // drain the current channel
                     while state.timer_receiver.try_recv().is_ok() {}
-                    let animation_state = metadata.current()?;
+                    let animation_state = state.metadata.current()?;
                     for (_, output) in state.renders.iter_mut() {
                         refresh_output(
                             output,
                             &mut resource_loader,
                             &animation_state,
-                            Scaling::Fill,
-                            Filter::Best,
+                            state.scale,
+                            state.filter,
                         )?;
                         state.ticker_active = state_draw(
                             &animation_state,
@@ -217,6 +225,17 @@ pub fn work(
                         "Refreshing of all outputs took {}ms",
                         start.elapsed().as_millis()
                     );
+                }
+                WorkerMessage::IPCConfigUpdate(msg) => {
+                    debug!("IPC Config update");
+                    state.metadata = crate::get_metadata_for_path(&msg.mode, &msg.path)?;
+                    if let Some(val) = msg.scaling {
+                        state.scale = val;
+                    }
+                    if let Some(val) = msg.filter {
+                        state.filter = val;
+                    }
+                    senders.send(WorkerMessage::Refresh).expect("Cannot fail");
                 }
             }
         }

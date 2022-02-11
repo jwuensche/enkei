@@ -16,7 +16,8 @@
 
 use error_report::ErrorReport;
 use log::debug;
-use metadata::MetadataError;
+use metadata::{Metadata, MetadataError};
+use serde::Deserialize;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 use wayland_client::{ConnectError, GlobalError};
 
@@ -170,7 +171,7 @@ pub struct Args {
     mode: Option<Mode>,
 }
 
-#[derive(ArgEnum, Clone, Debug)]
+#[derive(ArgEnum, Clone, Debug, Deserialize)]
 pub enum Mode {
     Static,
     Dynamic,
@@ -248,26 +249,7 @@ fn main() -> Result<(), ErrorReport> {
     }
 
     // Read Metadata or Prepare Static Mode
-    let metadata = {
-        match args.mode {
-            Some(Mode::Static) => MetadataReader::static_configuration(&args.file),
-            Some(Mode::Dynamic) => MetadataReader::read(&args.file)?,
-            None => {
-                debug!("Checking path {{ {:?} }}", &args.file);
-                let extension = args.file.extension();
-                if extension.is_some() && extension.unwrap() == "xml" {
-                    MetadataReader::read(&args.file)?
-                } else if regex_is_match!(
-                    r"\.(?i)(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
-                    args.file.to_str().expect("Could not deciper given path")
-                ) {
-                    MetadataReader::static_configuration(&args.file)
-                } else {
-                    return Err(ErrorReport::new(ApplicationError::InvalidDataType));
-                }
-            }
-        }
-    };
+    let metadata = get_metadata_for_path(&args.mode, &args.file)?;
 
     let result = worker::work(
         globals,
@@ -285,4 +267,28 @@ fn main() -> Result<(), ErrorReport> {
         return Err(report);
     }
     Ok(())
+}
+
+fn get_metadata_for_path(
+    mode: &Option<Mode>,
+    path: &PathBuf,
+) -> Result<Metadata, ApplicationError> {
+    match mode {
+        Some(Mode::Static) => Ok(MetadataReader::static_configuration(path)),
+        Some(Mode::Dynamic) => Ok(MetadataReader::read(path)?),
+        None => {
+            debug!("Checking path {{ {:?} }}", path);
+            let extension = path.extension();
+            if extension.is_some() && extension.unwrap() == "xml" {
+                Ok(MetadataReader::read(path)?)
+            } else if regex_is_match!(
+                r"\.(?i)(png|jpg|jpeg|gif|webp|farbfeld|tif|tiff|bmp|ico){1}$",
+                path.to_str().expect("Could not deciper given path")
+            ) {
+                Ok(MetadataReader::static_configuration(path))
+            } else {
+                return Err(ApplicationError::InvalidDataType);
+            }
+        }
+    }
 }

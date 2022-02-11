@@ -27,5 +27,6 @@ pub enum WorkerMessage {
     RemoveOutput(u32),
     AnimationStep(f32),
     AnimationStart(f64),
+    IPCConfigUpdate(crate::watchdog::ipc::Message),
     Refresh,
 }

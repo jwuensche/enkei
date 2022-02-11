@@ -31,7 +31,7 @@ use cached::Cached;
 
 pub struct ResourceLoader {
     last_loaded: SizedCache<PathBuf, Image>,
-    scaled: SizedCache<(PathBuf, ScaledMode), Vec<u8>>,
+    scaled: SizedCache<(PathBuf, ScaledMode, Filter, Scaling), Vec<u8>>,
 }
 
 impl ResourceLoader {
@@ -49,7 +49,7 @@ impl ResourceLoader {
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Vec<u8>, ImageError> {
-        let scale_key = (path.clone(), mode.clone());
+        let scale_key = (path.clone(), mode.clone(), filter.clone(), scaling.clone());
         // workaround as this introduces nastier non-lexical lifetimes
         if self.scaled.cache_get(&scale_key).is_some() {
             // The scaling and filter cannot differ
@@ -66,7 +66,11 @@ impl ResourceLoader {
             self.last_loaded.cache_set(path.clone(), surface);
         }
 
-        let surface = self.last_loaded.cache_get(path).expect("Cannot fail");
+        let surface = self.last_loaded.cache_get_mut(path).expect("Cannot fail");
+        // Update the scaling and the filter to get the proper ratio for the new
+        // image
+        surface.scaling = scaling;
+        surface.filter = filter;
         let surface_scaled = surface.process(mode)?;
         self.scaled.cache_set(scale_key.clone(), surface_scaled);
         return Ok(self.scaled.cache_get(&scale_key).expect("Cannot fail"));
