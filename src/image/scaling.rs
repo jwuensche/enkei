@@ -135,13 +135,11 @@ impl Scaling {
         let crop_height = ((buf.height() as f64 * max_ratio) as i32)
             .checked_sub(geometry.height)
             .map(|elem| (elem / 2) as f64)
-            .unwrap_or(0.0)
-            .clamp(-(geometry.height as f64), geometry.height as f64);
+            .unwrap_or(0.0);
         let crop_width = ((buf.width() as f64 * max_ratio) as i32)
             .checked_sub(geometry.width)
             .map(|elem| (elem / 2) as f64)
-            .unwrap_or(0.0)
-            .clamp(-(geometry.width as f64), geometry.width as f64);
+            .unwrap_or(0.0);
 
         /*
          * SIMD Resize
