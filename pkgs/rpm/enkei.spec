@@ -36,6 +36,7 @@ cp target/release/%{name}ctl $RPM_BUILD_ROOT/%{_bindir}
 %files
 %license COPYING
 %{_bindir}/%{name}
+%{_bindir}/%{name}ctl
 
 %changelog
 * Sun Feb 06 2022 v0.9.1 - Johannes <johannes@spacesnek.rocks>
