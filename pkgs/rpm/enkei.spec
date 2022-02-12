@@ -31,6 +31,7 @@ cargo build --release
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/%{_bindir}
 cp target/release/%{name} $RPM_BUILD_ROOT/%{_bindir}
+cp target/release/%{name}ctl $RPM_BUILD_ROOT/%{_bindir}
 
 %files
 %license COPYING
