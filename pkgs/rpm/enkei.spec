@@ -1,5 +1,5 @@
 Name:           enkei
-Version:        0.9.1
+Version:        0.9.2
 Release:        1%{?dist}
 Summary:        A modern wallpaper tool with Gnome dynamic wallpaper support.
 
@@ -39,6 +39,13 @@ cp target/release/%{name}ctl $RPM_BUILD_ROOT/%{_bindir}
 %{_bindir}/%{name}ctl
 
 %changelog
+* Sat Feb 12 2022 v0.9.2 - Johannes <johannes@spacesnek.rocks>
+  - Add enkeictl to README
+  - Add install of `enkeictl` in packages
+  - Add `enkeictl` & IPC interface to allow changing wallpaper while running
+  - Fix color spaces on "none" scale setting
+  - Fix timer cancellation
+  - Fix image offset if image is scaled
 * Sun Feb 06 2022 v0.9.1 - Johannes <johannes@spacesnek.rocks>
   - Fix display behavior when using a scaling factors > 1
   - Use SIMD image resizing to cut down on startup time

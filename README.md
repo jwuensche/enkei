@@ -135,13 +135,6 @@ How to run wayland specific daemons in systemd is well described in the [ArchWik
 - [oguri](https://github.com/vilhalmer/oguri)
 
 ## Feature Ideas
-  
-- [x] Allow setting of wallpapers via IPC (implemented on main branch)
-
-    > A nice to have would be to send messages to the already running enkei
-    > instance to change the wallpaper shown.
-    > `oguri` has done something similar seems like a cool feature to have to
-    > avoid respawning the application.
     
 - [ ] Individual wallpapers on different displays
 
