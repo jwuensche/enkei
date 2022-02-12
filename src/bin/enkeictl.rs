@@ -100,7 +100,7 @@ fn main() {
         mode: args.mode,
     };
     if let Err(_) = write(msg) {
-        eprintln!("Could not connect to enkei. Is it running?");
+        eprintln!("Could not connect to enkei. Please make sure that $XDG_RUNTIME_DIR is set and enkei is running.");
         std::process::exit(1);
     }
 }

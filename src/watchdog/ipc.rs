@@ -1,7 +1,7 @@
 use std::{io::Read, os::unix::net::UnixListener, path::PathBuf};
 
 use crossbeam_channel::Sender;
-use log::{debug, error, info};
+use log::{debug, error, warn};
 use serde::Deserialize;
 
 use crate::{
@@ -33,7 +33,7 @@ pub struct Message {
 // Errors related to socket creation are not fatal and will be logged for the user
 pub fn spawn(tx: Sender<WorkerMessage>) {
     if let Err(e) = spawn_inner(tx) {
-        info!("Could not spawn IPC socket. Reason: {e}");
+        warn!("Could not spawn IPC socket. Reason: {e}");
     }
 }
 
