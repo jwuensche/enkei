@@ -15,10 +15,11 @@ But the use cases were quite different from what I wanted or I wasn't happy with
 
 ## Features
 
-- [X] Show Static Wallpapers
-- [X] Show Dynamic Wallpapers
-- [x] Scale images to fill and fit
+- [X] Show static wallpapers
+- [X] Show dynamic wallpapers
+- [X] Scale images to fill and fit
 - [X] Filter images after scaling to improve visuals
+- [X] Change wallpaper on-the-fly with `enkeictl`
 - [X] Support most common image formats (PNG, JPEG, WEBP, BMP,...)
 
 > Under the hood we use [image](https://crates.io/crates/image) and [webp](https://github.com/jaredforth/webp) which provide the most common image types.
@@ -45,6 +46,8 @@ and many more; check an incomplete list here: https://github.com/solarkraft/awes
 | `-f` | Filter Methods (Fast, Good, Best) [default: Good] |
 | `-m` | Display Mode (Dynamic, Static) [default: Autodetect]                           |
 | `-s` | Scale (Fill, Fit, None) [default: Fill]                                        |
+
+`enkei` and `enkeictl` share these options. Specifying options in `enkeictl` will overwrite them in the running `enkei` instance.
 
 ## Installation
 
