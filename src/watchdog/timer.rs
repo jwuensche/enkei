@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crossbeam_channel::{Receiver, Sender};
 use log::debug;
+use std::sync::mpsc::{Receiver, Sender};
 
 use crate::messages::WorkerMessage;
 

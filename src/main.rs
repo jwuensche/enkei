@@ -21,9 +21,9 @@ use serde::Deserialize;
 use wayland_client::{protocol::wl_registry::WlRegistry, Attached, GlobalEvent, Main};
 use wayland_client::{ConnectError, GlobalError};
 
-use crossbeam_channel::unbounded;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::mpsc::channel;
 use std::sync::RwLock;
 
 use wayland_client::{protocol::wl_output, Display, GlobalManager};
@@ -192,7 +192,7 @@ fn main() -> Result<(), ErrorReport> {
     let wl_outputs = Rc::new(RwLock::new(Vec::new()));
     let pass_outputs = Rc::clone(&wl_outputs);
 
-    let (message_tx, message_rx) = unbounded();
+    let (message_tx, message_rx) = channel();
     let tx = message_tx.clone();
 
     let globals = GlobalManager::new_with_cb(

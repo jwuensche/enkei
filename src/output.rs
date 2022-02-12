@@ -17,9 +17,9 @@
 use crate::{outputs::ScaledMode, ApplicationError};
 
 use super::outputs::Output;
-use crossbeam_channel::unbounded;
 use khronos_egl::{Context as eglContext, Display as eglDisplay, Surface as eglSurface};
 use log::debug;
+use std::sync::mpsc::channel;
 use wayland_egl::WlEglSurface;
 
 use super::opengl::context::Context as glContext;
@@ -87,7 +87,7 @@ impl OutputRendering {
         background.set_exclusive_zone(-1);
         background.set_size(0, 0);
         surface.commit();
-        let (tx, rx) = unbounded();
+        let (tx, rx) = channel();
         background.quick_assign(move |layer, event, _| {
             if let LayerEvent::Configure {
                 serial,

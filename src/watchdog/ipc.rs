@@ -1,8 +1,8 @@
 use std::{io::Read, os::unix::net::UnixListener, path::PathBuf};
 
-use crossbeam_channel::Sender;
 use log::{debug, error, warn};
 use serde::Deserialize;
+use std::sync::mpsc::Sender;
 
 use crate::{
     image::scaling::{Filter, Scaling},

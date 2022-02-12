@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use std::collections::hash_map::Entry;
 use std::rc::Rc;
@@ -38,22 +38,44 @@ pub struct State {
     fps: f64,
     ticker_active: bool,
     renders: HashMap<u32, OutputRendering>,
-    stop_all_timers: Sender<()>,
-    timer_receiver: Receiver<()>,
+    timers: TimerCollection,
     metadata: Metadata,
     scale: Scaling,
     filter: Filter,
 }
 
+struct TimerCollection {
+    inner: Vec<Sender<()>>,
+}
+
+impl TimerCollection {
+    pub fn new() -> Self {
+        TimerCollection { inner: Vec::new() }
+    }
+
+    fn new_timer_channel(&mut self) -> Receiver<()> {
+        let (tx, rx) = channel();
+        self.inner.push(tx);
+        rx
+    }
+
+    fn cancel_timers(&mut self) {
+        for timers in self.inner.iter() {
+            // Try to send, if this errors the other channel is already dead
+            // This is fine for use though
+            timers.send(()).ok();
+        }
+        self.inner.clear();
+    }
+}
+
 impl State {
     fn new(metadata: Metadata, scale: Scaling, filter: Filter) -> Self {
-        let (tx, rx) = unbounded();
         Self {
             fps: 1f64,
             ticker_active: false,
             renders: HashMap::new(),
-            stop_all_timers: tx,
-            timer_receiver: rx,
+            timers: TimerCollection::new(),
             metadata,
             scale,
             filter,
@@ -126,15 +148,13 @@ pub fn work(
                     drop(lock);
 
                     if let Entry::Vacant(e) = state.renders.entry(id) {
-                        e.insert(
-     OutputRendering::new(
-                                &compositor,
-                                &layers,
-                                &mut event_queue,
-                                Rc::clone(&output),
-                                egl_display,
-                            )?,
-                        );
+                        e.insert(OutputRendering::new(
+                            &compositor,
+                            &layers,
+                            &mut event_queue,
+                            Rc::clone(&output),
+                            egl_display,
+                        )?);
                         let output = state.renders.get_mut(&id).expect("Cannot fail");
                         let animation_state = state.metadata.current()?;
                         refresh_output(
@@ -150,7 +170,7 @@ pub fn work(
                             state.ticker_active,
                             state.fps,
                             senders.clone(),
-                            state.timer_receiver.clone(),
+                            state.timers.new_timer_channel(),
                         )?;
                     } else {
                         debug!("Output {{ id: {id} }} updated and not new. Refreshing.");
@@ -193,16 +213,14 @@ pub fn work(
                         count as u64,
                         0,
                         senders.clone(),
-                        state.timer_receiver.clone(),
+                        state.timers.new_timer_channel(),
                     );
                 }
                 WorkerMessage::Refresh => {
                     debug!("Message: Refresh");
                     let start = std::time::Instant::now();
                     state.ticker_active = false;
-                    state.stop_all_timers.send(()).expect("Cannot fail");
-                    // drain the current channel
-                    while state.timer_receiver.try_recv().is_ok() {}
+                    state.timers.cancel_timers();
                     let animation_state = state.metadata.current()?;
                     for (_, output) in state.renders.iter_mut() {
                         refresh_output(
@@ -218,7 +236,7 @@ pub fn work(
                             state.ticker_active,
                             state.fps,
                             senders.clone(),
-                            state.timer_receiver.clone(),
+                            state.timers.new_timer_channel(),
                         )?;
                     }
                     debug!(
