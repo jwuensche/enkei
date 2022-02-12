@@ -49,7 +49,7 @@ impl ResourceLoader {
         scaling: Scaling,
         filter: Filter,
     ) -> Result<&Vec<u8>, ImageError> {
-        let scale_key = (path.clone(), mode.clone(), filter.clone(), scaling.clone());
+        let scale_key = (path.clone(), mode.clone(), filter, scaling);
         // workaround as this introduces nastier non-lexical lifetimes
         if self.scaled.cache_get(&scale_key).is_some() {
             // The scaling and filter cannot differ

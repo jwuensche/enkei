@@ -45,26 +45,23 @@ fn spawn_inner(tx: Sender<WorkerMessage>) -> Result<(), InnerError> {
     // TODO: Clean up when leaving this may create situations where we can't
     // find the receiver side anymore and the sending is refused.
     std::fs::remove_file(&socket_path).ok();
-    let socket = UnixListener::bind(&socket_path).map_err(|e| InnerError::SocketCreation(e))?;
+    let socket = UnixListener::bind(&socket_path).map_err(InnerError::SocketCreation)?;
     std::thread::spawn(move || loop {
-        match socket.accept() {
-            Ok((mut socket, _)) => {
-                let mut res = Vec::new();
-                socket.read_to_end(&mut res).ok();
-                if let Ok(msg) = bincode::deserialize::<Message>(&res) {
-                    if msg.path.exists() && msg.path.is_file() {
-                        debug!("Received path {{ {:?} }}", msg.path);
-                        tx.send(WorkerMessage::IPCConfigUpdate(msg))
-                            .expect("Cannot fail");
-                    } else {
-                        debug!(
-                            "Received a message {{ {:?} }} but it was no valid path. Dropping...",
-                            msg.path
-                        )
-                    }
+        if let Ok((mut socket, _)) = socket.accept() {
+            let mut res = Vec::new();
+            socket.read_to_end(&mut res).ok();
+            if let Ok(msg) = bincode::deserialize::<Message>(&res) {
+                if msg.path.exists() && msg.path.is_file() {
+                    debug!("Received path {{ {:?} }}", msg.path);
+                    tx.send(WorkerMessage::IPCConfigUpdate(msg))
+                        .expect("Cannot fail");
+                } else {
+                    debug!(
+                        "Received a message {{ {:?} }} but it was no valid path. Dropping...",
+                        msg.path
+                    )
                 }
             }
-            Err(_) => {}
         }
     });
     Ok(())

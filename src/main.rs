@@ -171,7 +171,7 @@ pub struct Args {
     mode: Option<Mode>,
 }
 
-#[derive(ArgEnum, Clone, Debug, Deserialize)]
+#[derive(ArgEnum, Clone, Copy, Debug, Deserialize)]
 pub enum Mode {
     Static,
     Dynamic,
@@ -287,7 +287,7 @@ fn get_metadata_for_path(
             ) {
                 Ok(MetadataReader::static_configuration(path))
             } else {
-                return Err(ApplicationError::InvalidDataType);
+                Err(ApplicationError::InvalidDataType)
             }
         }
     }

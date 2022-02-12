@@ -16,6 +16,7 @@
 
 use crossbeam_channel::{unbounded, Receiver, Sender};
 
+use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use log::debug;
@@ -107,38 +108,26 @@ pub fn work(
             match msg {
                 WorkerMessage::AddOutput(output, id) => {
                     debug!("Message: AddOutput {{ id: {} }}", id);
+                    let lock = output
+                        .read()
+                        .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
+                    if let Some(geo) = lock.geometry() {
+                        debug!(
+                            "Updating output {{ make: {}, model: {}, position: {}x{} }}",
+                            geo.make(),
+                            geo.model(),
+                            geo.x(),
+                            geo.y()
+                        );
+                    }
+                    if let Some(fps) = lock.refresh_rate() {
+                        state.set_fps(fps);
+                    }
+                    drop(lock);
 
-                    if state.renders.contains_key(&id) {
-                        debug!("Output {{ id: {id} }} updated and not new. Refreshing.");
-                        // On Change we have to reinitialize the output, though this needs
-                        // to be a complete reinit with all surfaces so for simplicity we
-                        // "destroy" the output here and add it anew.
-                        senders
-                            .send(WorkerMessage::RemoveOutput(id))
-                            .expect("Cannot fail");
-                        senders
-                            .send(WorkerMessage::AddOutput(output, id))
-                            .expect("Cannot fail");
-                    } else {
-                        let lock = output
-                            .read()
-                            .map_err(|_| ApplicationError::locked_out(line!(), file!()))?;
-                        if let Some(geo) = lock.geometry() {
-                            debug!(
-                                "Rendering on output {{ make: {}, model: {}, position: {}x{} }}",
-                                geo.make(),
-                                geo.model(),
-                                geo.x(),
-                                geo.y()
-                            );
-                        }
-                        if let Some(fps) = lock.refresh_rate() {
-                            state.set_fps(fps);
-                        }
-                        drop(lock);
-                        state.renders.insert(
-                            id,
-                            OutputRendering::new(
+                    if let Entry::Vacant(e) = state.renders.entry(id) {
+                        e.insert(
+     OutputRendering::new(
                                 &compositor,
                                 &layers,
                                 &mut event_queue,
@@ -163,6 +152,17 @@ pub fn work(
                             senders.clone(),
                             state.timer_receiver.clone(),
                         )?;
+                    } else {
+                        debug!("Output {{ id: {id} }} updated and not new. Refreshing.");
+                        // On Change we have to reinitialize the output, though this needs
+                        // to be a complete reinit with all surfaces so for simplicity we
+                        // "destroy" the output here and add it anew.
+                        senders
+                            .send(WorkerMessage::RemoveOutput(id))
+                            .expect("Cannot fail");
+                        senders
+                            .send(WorkerMessage::AddOutput(output, id))
+                            .expect("Cannot fail");
                     }
                 }
                 WorkerMessage::RemoveOutput(id) => {
