@@ -93,15 +93,26 @@ pub enum Mode {
 fn main() {
     let args = Args::parse();
 
-    let msg = Message {
-        filter: args.filter,
-        scaling: args.scale,
-        path: args.file,
-        mode: args.mode,
-    };
-    if write(msg).is_err() {
-        eprintln!("Could not connect to enkei. Please make sure that $XDG_RUNTIME_DIR is set and enkei is running.");
+    if !args.file.exists() {
+        eprintln!("Path {:?} does not exist.", args.file);
         std::process::exit(1);
+    }
+
+    if let Ok(abs) = args.file.canonicalize() {
+        let msg = Message {
+            filter: args.filter,
+            scaling: args.scale,
+            path: abs,
+            mode: args.mode,
+        };
+
+        if write(msg).is_err() {
+            eprintln!("Could not connect to enkei. Please make sure that $XDG_RUNTIME_DIR is set and enkei is running.");
+            std::process::exit(2);
+        }
+    } else {
+        eprintln!("Could not normalize path {:?}", args.file);
+        std::process::exit(3);
     }
 }
 
