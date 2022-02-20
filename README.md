@@ -12,6 +12,7 @@ But the use cases were quite different from what I wanted or I wasn't happy with
 <video width="100%" controls muted loop alt="A video showing enkei running on my laptop.">
   <source src="data/demo.webm" type="video/webm">
 </video>
+<img alt="A video showing enkei running on my laptop." src="data/demo.gif"/>
 
 ## Features
 
@@ -118,6 +119,7 @@ or to any other arbitrary directory in your `$PATH` e.g. `/usr/local/bin`
 ``` sh
 $ cargo build --release
 $ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
+$ install -Dm755 "target/release/enkeictl" "/usr/local/bin/enkeictl"
 ```
 
 
