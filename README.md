@@ -117,11 +117,10 @@ $ cargo install --path .
 or to any other arbitrary directory in your `$PATH` e.g. `/usr/local/bin`
 
 ``` sh
-$ cargo build --release
-$ install -Dm755 "target/release/enkei" "/usr/local/bin/enkei"
-$ install -Dm755 "target/release/enkeictl" "/usr/local/bin/enkeictl"
+$ ./scripts/install.sh --prefix "/usr/local/bin"
 ```
 
+> By default the `install.sh` script uses `/usr/bin`
 
 ### Using as a systemd-service
 
