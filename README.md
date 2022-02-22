@@ -12,7 +12,11 @@ But the use cases were quite different from what I wanted or I wasn't happy with
 <video width="100%" controls muted loop alt="A video showing enkei running on my laptop.">
   <source src="data/demo.webm" type="video/webm">
 </video>
-<img alt="A video showing enkei running on my laptop." src="data/demo.gif"/>
+
+![A video showing enkei running on my laptop.](data/demo.gif)
+
+> gif created with [gifski](https://gif.ski)
+
 
 ## Features
 
