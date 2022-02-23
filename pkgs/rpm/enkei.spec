@@ -1,5 +1,5 @@
 Name:           enkei
-Version:        0.9.2
+Version:        0.9.3
 Release:        1%{?dist}
 Summary:        A modern wallpaper tool with Gnome dynamic wallpaper support.
 
@@ -39,6 +39,9 @@ cp target/release/%{name}ctl $RPM_BUILD_ROOT/%{_bindir}
 %{_bindir}/%{name}ctl
 
 %changelog
+* Wed Feb 24 2022 v0.9.3 - Johannes <johannes@spacesnek.rocks>
+  - Fix relative paths from enkeictl
+  - Brighten up the README for gitea & github
 * Sat Feb 12 2022 v0.9.2 - Johannes <johannes@spacesnek.rocks>
   - Add enkeictl to README
   - Add install of `enkeictl` in packages
