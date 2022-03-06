@@ -117,6 +117,9 @@ pub fn work(
 
     // Spawn IPC socket
     crate::watchdog::ipc::spawn(senders.clone());
+    // Initialize Watchdogs for Suspension Cycles
+    crate::watchdog::sleeping::initialize(senders.clone());
+
     // Process all pending requests
     loop {
         event_queue
@@ -192,6 +195,7 @@ pub fn work(
                         debug!("Removing WlOuput Renderer {{ id: {} }}", output.output_id());
                         output.destroy()?;
                     }
+                    debug!("Removed WlOutput {{ id: {id} }}");
                 }
                 WorkerMessage::AnimationStep(process) => {
                     debug!("Message: AnimationStep {{ process: {} }}", process);
