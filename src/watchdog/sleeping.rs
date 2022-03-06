@@ -6,7 +6,7 @@ use log::{debug, info};
 
 use std::sync::mpsc::Sender;
 
-const POLL_INTERVAL_SEC: u64 = 10;
+const POLL_INTERVAL_SEC: u64 = 60;
 
 pub fn initialize(sender: Sender<WorkerMessage>) {
     debug!("Initializing Sleep Watchdog");
@@ -14,7 +14,7 @@ pub fn initialize(sender: Sender<WorkerMessage>) {
         let start = Local::now();
         std::thread::sleep(std::time::Duration::from_secs(POLL_INTERVAL_SEC));
         let end = Local::now();
-        if (end - start).num_seconds() > 10 {
+        if (end - start).num_seconds() > POLL_INTERVAL_SEC as i64 {
             info!("Detected Sleeping Cycle. Send Refresh to worker thread.");
             sender
                 .send(WorkerMessage::Refresh)
