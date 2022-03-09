@@ -10,10 +10,11 @@ const POLL_INTERVAL_SEC: u64 = 60;
 
 pub fn initialize(sender: Sender<WorkerMessage>) {
     debug!("Initializing Sleep Watchdog");
-    std::thread::spawn(move || {
+    std::thread::spawn(move || loop {
         let start = Local::now();
         std::thread::sleep(std::time::Duration::from_secs(POLL_INTERVAL_SEC));
         let end = Local::now();
+        debug!("Elapsed sleeping time {}s", (end - start).num_seconds());
         if (end - start).num_seconds() > POLL_INTERVAL_SEC as i64 {
             info!("Detected Sleeping Cycle. Send Refresh to worker thread.");
             sender
